@@ -48,7 +48,8 @@ namespace FORWARD
 		bool prefiltered,
 		int2* rects,
 		float3 boxmin,
-		float3 boxmax);
+		float3 boxmax,
+		int* clipped);
 
 	// Main rasterization method.
 	void render(
@@ -64,7 +65,9 @@ namespace FORWARD
 		const float* bg_color,
 		float* out_color,
 		const float* depth,
-	    float* out_depth);
+	    float* out_depth,
+		int* clipped,
+		cudaSurfaceObject_t camera_depth);
 }
 
 

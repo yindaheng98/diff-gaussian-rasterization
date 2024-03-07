@@ -205,6 +205,7 @@ int CudaRasterizer::Rasterizer::forward(
 	std::function<char* (size_t)> imageBuffer,
 	const int P, int D, int M,
 	const float* background,
+	cudaSurfaceObject_t camera_depth,
 	const int width, int height,
 	const float* means3D,
 	const float* shs,
@@ -224,7 +225,95 @@ int CudaRasterizer::Rasterizer::forward(
 	int* radii,
 	int* rects,
 	float* boxmin,
-	float* boxmax)
+	float* boxmax,
+	int* clipped)
+{
+	int num_rendered = CudaRasterizer::Rasterizer::forward_preprocess(
+		geometryBuffer,
+		binningBuffer,
+		imageBuffer,
+		P, D, M,
+		background,
+		width, height,
+		means3D,
+		shs,
+		colors_precomp,
+		opacities,
+		scales,
+		scale_modifier,
+		rotations,
+		cov3D_precomp,
+		viewmatrix,
+		projmatrix,
+		cam_pos,
+		tan_fovx, tan_fovy,
+		prefiltered,
+		radii,
+		rects,
+		boxmin,
+		boxmax,
+		clipped);
+
+	if (num_rendered > 0) {
+		CudaRasterizer::Rasterizer::forward_render(
+			geometryBuffer,
+			binningBuffer,
+			imageBuffer,
+			P, D, M,
+			background,
+			camera_depth,
+			width, height,
+			means3D,
+			shs,
+			colors_precomp,
+			opacities,
+			scales,
+			scale_modifier,
+			rotations,
+			cov3D_precomp,
+			viewmatrix,
+			projmatrix,
+			cam_pos,
+			tan_fovx, tan_fovy,
+			prefiltered,
+			out_color,
+			out_depth,
+			radii,
+			rects,
+			boxmin,
+			boxmax,
+			clipped,
+			num_rendered);
+	}
+
+	return num_rendered;
+}
+
+int CudaRasterizer::Rasterizer::forward_preprocess(
+	std::function<char* (size_t)> geometryBuffer,
+	std::function<char* (size_t)> binningBuffer,
+	std::function<char* (size_t)> imageBuffer,
+	const int P, int D, int M,
+	const float* background,
+	const int width, int height,
+	const float* means3D,
+	const float* shs,
+	const float* colors_precomp,
+	const float* opacities,
+	const float* scales,
+	const float scale_modifier,
+	const float* rotations,
+	const float* cov3D_precomp,
+	const float* viewmatrix,
+	const float* projmatrix,
+	const float* cam_pos,
+	const float tan_fovx, float tan_fovy,
+	const bool prefiltered,
+	int* radii,
+	int* rects,
+	float* boxmin,
+	float* boxmax,
+	int* clipped)
 {
 	const float focal_y = height / (2.0f * tan_fovy);
 	const float focal_x = width / (2.0f * tan_fovx);
@@ -287,7 +376,8 @@ int CudaRasterizer::Rasterizer::forward(
 		prefiltered,
 		(int2*)rects,
 		minn,
-		maxx
+		maxx,
+		clipped
 	);
 
 	// Compute prefix sum over full list of touched tile counts by Gaussians
@@ -340,6 +430,59 @@ int CudaRasterizer::Rasterizer::forward(
 			imgState.ranges
 			);
 
+	return num_rendered;
+}
+
+void CudaRasterizer::Rasterizer::forward_render(
+	std::function<char* (size_t)> geometryBuffer,
+	std::function<char* (size_t)> binningBuffer,
+	std::function<char* (size_t)> imageBuffer,
+	const int P, int D, int M,
+	const float* background,
+	cudaSurfaceObject_t camera_depth,
+	const int width, int height,
+	const float* means3D,
+	const float* shs,
+	const float* colors_precomp,
+	const float* opacities,
+	const float* scales,
+	const float scale_modifier,
+	const float* rotations,
+	const float* cov3D_precomp,
+	const float* viewmatrix,
+	const float* projmatrix,
+	const float* cam_pos,
+	const float tan_fovx, float tan_fovy,
+	const bool prefiltered,
+	float* out_color,
+	float* out_depth,
+	int* radii,
+	int* rects,
+	float* boxmin,
+	float* boxmax,
+	int* clipped,
+	int num_rendered)
+{
+	if (num_rendered == 0) {
+		return;
+	}
+
+	size_t chunk_size = required<GeometryState>(P);
+	char* chunkptr = geometryBuffer(chunk_size);
+	GeometryState geomState = GeometryState::fromChunk(chunkptr, P);
+
+	dim3 tile_grid((width + BLOCK_X - 1) / BLOCK_X, (height + BLOCK_Y - 1) / BLOCK_Y, 1);
+	dim3 block(BLOCK_X, BLOCK_Y, 1);
+
+	// Dynamically resize image-based auxiliary buffers during training
+	int img_chunk_size = required<ImageState>(width * height);
+	char* img_chunkptr = imageBuffer(img_chunk_size);
+	ImageState imgState = ImageState::fromChunk(img_chunkptr, width * height);
+
+	int binning_chunk_size = required<BinningState>(num_rendered);
+	char* binning_chunkptr = binningBuffer(binning_chunk_size);
+	BinningState binningState = BinningState::fromChunk(binning_chunkptr, num_rendered);
+
 	// Let each tile blend its range of Gaussians independently in parallel
 	const float* feature_ptr = colors_precomp != nullptr ? colors_precomp : geomState.rgb;
 	FORWARD::render(
@@ -355,10 +498,12 @@ int CudaRasterizer::Rasterizer::forward(
 		background,
 		out_color,
 		geomState.depths,
-		out_depth);
-
-	return num_rendered;
+		out_depth,
+		clipped,
+		camera_depth);
 }
+
+
 
 // Produce necessary gradients for optimization, corresponding
 // to forward render pass

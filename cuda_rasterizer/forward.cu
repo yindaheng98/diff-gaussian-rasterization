@@ -180,7 +180,8 @@ __global__ void preprocessCUDA(int P, int D, int M,
 	bool prefiltered,
 	int2* rects,
 	float3 boxmin,
-	float3 boxmax)
+	float3 boxmax,
+	int* clipped)
 {
 	auto idx = cg::this_grid().thread_rank();
 	if (idx >= P)
@@ -190,18 +191,23 @@ __global__ void preprocessCUDA(int P, int D, int M,
 	// this Gaussian will not be processed further.
 	radii[idx] = 0;
 	tiles_touched[idx] = 0;
+	clipped[idx] = 0;
 
 	// Perform near culling, quit if outside.
 	float3 p_view;
 	if (!in_frustum(idx, orig_points, viewmatrix, projmatrix, prefiltered, p_view))
-		return;
+	{
+		clipped[idx] = 1;
+	}
 
 	// Transform point by projecting
 	float3 p_orig = { orig_points[3 * idx], orig_points[3 * idx + 1], orig_points[3 * idx + 2] };
 
 	if (p_orig.x < boxmin.x || p_orig.y < boxmin.y || p_orig.z < boxmin.z ||
 		p_orig.x > boxmax.x || p_orig.y > boxmax.y || p_orig.z > boxmax.z)
-		return;
+	{
+		clipped[idx] = 1;
+	}
 
 	float4 p_hom = transformPoint4x4(p_orig, projmatrix);
 	float p_w = 1.0f / (p_hom.w + 0.0000001f);
@@ -260,6 +266,7 @@ __global__ void preprocessCUDA(int P, int D, int M,
 	// spherical harmonics coefficients to RGB color.
 	if (colors_precomp == nullptr)
 	{
+		//TODO: Avoid this if clipped ?
 		glm::vec3 result = computeColorFromSH(idx, D, M, (glm::vec3*)orig_points, *cam_pos, shs, clamped);
 		rgb[idx * C + 0] = result.x;
 		rgb[idx * C + 1] = result.y;
@@ -292,7 +299,9 @@ renderCUDA(
 	const float* __restrict__ bg_color,
 	float* __restrict__ out_color,
 	const float* __restrict__ depth,
-	float* __restrict__ out_depth)
+	float* __restrict__ out_depth,
+	const int* __restrict__ clipped,
+	cudaSurfaceObject_t camera_depth)
 {
 	// Identify current tile and associated min/max pixel range.
 	auto block = cg::this_thread_block();
@@ -304,7 +313,7 @@ renderCUDA(
 	float2 pixf = { (float)pix.x, (float)pix.y };
 
 	// Check if this thread is associated with a valid pixel or outside.
-	bool inside = pix.x < W&& pix.y < H;
+	bool inside = pix.x < W && pix.y < H;
 	// Done threads can help with fetching, but don't rasterize
 	bool done = !inside;
 
@@ -324,7 +333,13 @@ renderCUDA(
 	uint32_t contributor = 0;
 	uint32_t last_contributor = 0;
 	float C[CHANNELS] = { 0 };
+	float A = 0.0f;
+	float FarD = 0.0f;
 	float D = 0.0f;
+
+	if (inside) {
+		surf2Dread(&FarD, camera_depth, (int)sizeof(float) * pix.x, H - 1 - pix.y, cudaBoundaryModeClamp);
+	}
 
 	// Iterate over batches until all done or range is complete
 	for (int i = 0; i < rounds; i++, toDo -= BLOCK_SIZE)
@@ -368,18 +383,38 @@ renderCUDA(
 			float alpha = min(0.99f, con_o.w * exp(power));
 			if (alpha < 1.0f / 255.0f)
 				continue;
-			float test_T = T * (1 - alpha);
+			
+			int splat_id = collected_id[j];
+			float dep = collected_depth[j];
+			bool is_kept = clipped[splat_id] == 0;
+			
+			//TODO: If it's sorted by growing depth we can set done to true
+			//Skip splat that are too far
+			if (dep > FarD) {
+				done = true;
+				continue;
+			}
+
+			float test_T = T;
+			if (is_kept) {
+				test_T = T * (1 - alpha);
+			}
+
 			if (test_T < 0.0001f)
 			{
 				done = true;
 				continue;
 			}
 
-			// Eq. (3) from 3D Gaussian splatting paper.
-			for (int ch = 0; ch < CHANNELS; ch++)
-				C[ch] += features[collected_id[j] * CHANNELS + ch] * alpha * T;
+			if (is_kept) {
+				// Eq. (3) from 3D Gaussian splatting paper.
+				for (int ch = 0; ch < CHANNELS; ch++) {
+					C[ch] += features[splat_id * CHANNELS + ch] * alpha * T;
+				}
 
-            float dep = collected_depth[j];
+				A += alpha * T;
+			}
+
             D += dep * alpha * T;
 
 			T = test_T;
@@ -396,8 +431,14 @@ renderCUDA(
 	{
 		final_T[pix_id] = T;
 		n_contrib[pix_id] = last_contributor;
+		
+		//Remove composition with the background color
+		//Add alpha channel
+		//output also depth
 		for (int ch = 0; ch < CHANNELS; ch++)
-			out_color[ch * H * W + pix_id] = C[ch] + T * bg_color[ch];
+			out_color[ch * H * W + pix_id] = C[ch];
+		
+		out_color[CHANNELS * H * W + pix_id] = A;
 		out_depth[pix_id] = D;
 	}
 }
@@ -415,9 +456,11 @@ void FORWARD::render(
 	const float* bg_color,
 	float* out_color,
 	const float* depth,
-	float* out_depth)
+	float* out_depth,
+	int* clipped,
+	cudaSurfaceObject_t camera_depth)
 {
-	renderCUDA<NUM_CHANNELS> << <grid, block >> > (
+	renderCUDA<NUM_CHANNELS> <<<grid, block>>> (
 		ranges,
 		point_list,
 		W, H,
@@ -429,7 +472,9 @@ void FORWARD::render(
 		bg_color,
 		out_color,
 		depth,
-		out_depth);
+		out_depth,
+		clipped,
+		camera_depth);
 }
 
 void FORWARD::preprocess(int P, int D, int M,
@@ -459,7 +504,8 @@ void FORWARD::preprocess(int P, int D, int M,
 	bool prefiltered,
 	int2* rects,
 	float3 boxmin,
-	float3 boxmax)
+	float3 boxmax,
+	int* clipped)
 {
 	preprocessCUDA<NUM_CHANNELS> << <(P + 255) / 256, 256 >> > (
 		P, D, M,
@@ -489,6 +535,7 @@ void FORWARD::preprocess(int P, int D, int M,
 		prefiltered,
 		rects,
 		boxmin,
-		boxmax
+		boxmax,
+		clipped
 		);
 }
