@@ -54,8 +54,7 @@ namespace CudaRasterizer
 			int* radii = nullptr,
 			int* rects = nullptr,
 			float* boxmin = nullptr,
-			float* boxmax = nullptr,
-			int* clipped = nullptr);
+			float* boxmax = nullptr);
 
 		static int forward_preprocess(
 			std::function<char* (size_t)> geometryBuffer,
@@ -80,8 +79,7 @@ namespace CudaRasterizer
 			int* radii = nullptr,
 			int* rects = nullptr,
 			float* boxmin = nullptr,
-			float* boxmax = nullptr,
-			int* clipped = nullptr);
+			float* boxmax = nullptr);
 
 		static void forward_render(
 			std::function<char* (size_t)> geometryBuffer,
@@ -110,7 +108,6 @@ namespace CudaRasterizer
 			int* rects = nullptr,
 			float* boxmin = nullptr,
 			float* boxmax = nullptr,
-			int* clipped = nullptr,
 			int num_rendered = 0);
 
 		static void backward(

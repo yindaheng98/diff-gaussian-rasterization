@@ -225,8 +225,7 @@ int CudaRasterizer::Rasterizer::forward(
 	int* radii,
 	int* rects,
 	float* boxmin,
-	float* boxmax,
-	int* clipped)
+	float* boxmax)
 {
 	int num_rendered = CudaRasterizer::Rasterizer::forward_preprocess(
 		geometryBuffer,
@@ -251,8 +250,7 @@ int CudaRasterizer::Rasterizer::forward(
 		radii,
 		rects,
 		boxmin,
-		boxmax,
-		clipped);
+		boxmax);
 
 	if (num_rendered > 0) {
 		CudaRasterizer::Rasterizer::forward_render(
@@ -282,7 +280,6 @@ int CudaRasterizer::Rasterizer::forward(
 			rects,
 			boxmin,
 			boxmax,
-			clipped,
 			num_rendered);
 	}
 
@@ -312,8 +309,7 @@ int CudaRasterizer::Rasterizer::forward_preprocess(
 	int* radii,
 	int* rects,
 	float* boxmin,
-	float* boxmax,
-	int* clipped)
+	float* boxmax)
 {
 	const float focal_y = height / (2.0f * tan_fovy);
 	const float focal_x = width / (2.0f * tan_fovx);
@@ -376,8 +372,7 @@ int CudaRasterizer::Rasterizer::forward_preprocess(
 		prefiltered,
 		(int2*)rects,
 		minn,
-		maxx,
-		clipped
+		maxx
 	);
 
 	// Compute prefix sum over full list of touched tile counts by Gaussians
@@ -460,7 +455,6 @@ void CudaRasterizer::Rasterizer::forward_render(
 	int* rects,
 	float* boxmin,
 	float* boxmax,
-	int* clipped,
 	int num_rendered)
 {
 	if (num_rendered == 0) {
@@ -499,7 +493,6 @@ void CudaRasterizer::Rasterizer::forward_render(
 		out_color,
 		geomState.depths,
 		out_depth,
-		clipped,
 		camera_depth);
 }
 

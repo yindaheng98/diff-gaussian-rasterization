@@ -180,8 +180,7 @@ __global__ void preprocessCUDA(int P, int D, int M,
 	bool prefiltered,
 	int2* rects,
 	float3 boxmin,
-	float3 boxmax,
-	int* clipped)
+	float3 boxmax)
 {
 	auto idx = cg::this_grid().thread_rank();
 	if (idx >= P)
@@ -191,23 +190,18 @@ __global__ void preprocessCUDA(int P, int D, int M,
 	// this Gaussian will not be processed further.
 	radii[idx] = 0;
 	tiles_touched[idx] = 0;
-	clipped[idx] = 0;
 
 	// Perform near culling, quit if outside.
 	float3 p_view;
 	if (!in_frustum(idx, orig_points, viewmatrix, projmatrix, prefiltered, p_view))
-	{
-		clipped[idx] = 1;
-	}
+		return;
 
 	// Transform point by projecting
 	float3 p_orig = { orig_points[3 * idx], orig_points[3 * idx + 1], orig_points[3 * idx + 2] };
 
 	if (p_orig.x < boxmin.x || p_orig.y < boxmin.y || p_orig.z < boxmin.z ||
 		p_orig.x > boxmax.x || p_orig.y > boxmax.y || p_orig.z > boxmax.z)
-	{
-		clipped[idx] = 1;
-	}
+		return;
 
 	float4 p_hom = transformPoint4x4(p_orig, projmatrix);
 	float p_w = 1.0f / (p_hom.w + 0.0000001f);
@@ -300,7 +294,6 @@ renderCUDA(
 	float* __restrict__ out_color,
 	const float* __restrict__ depth,
 	float* __restrict__ out_depth,
-	const int* __restrict__ clipped,
 	cudaSurfaceObject_t camera_depth)
 {
 	// Identify current tile and associated min/max pixel range.
@@ -386,7 +379,6 @@ renderCUDA(
 			
 			int splat_id = collected_id[j];
 			float dep = collected_depth[j];
-			bool is_kept = clipped[splat_id] == 0;
 			
 			//TODO: If it's sorted by growing depth we can set done to true
 			//Skip splat that are too far
@@ -395,26 +387,19 @@ renderCUDA(
 				continue;
 			}
 
-			float test_T = T;
-			if (is_kept) {
-				test_T = T * (1 - alpha);
-			}
-
+			float test_T = T * (1 - alpha);
 			if (test_T < 0.0001f)
 			{
 				done = true;
 				continue;
 			}
 
-			if (is_kept) {
-				// Eq. (3) from 3D Gaussian splatting paper.
-				for (int ch = 0; ch < CHANNELS; ch++) {
-					C[ch] += features[splat_id * CHANNELS + ch] * alpha * T;
-				}
-
-				A += alpha * T;
+			// Eq. (3) from 3D Gaussian splatting paper.
+			for (int ch = 0; ch < CHANNELS; ch++) {
+				C[ch] += features[splat_id * CHANNELS + ch] * alpha * T;
 			}
 
+			A += alpha * T;
             D += dep * alpha * T;
 
 			T = test_T;
@@ -457,7 +442,6 @@ void FORWARD::render(
 	float* out_color,
 	const float* depth,
 	float* out_depth,
-	int* clipped,
 	cudaSurfaceObject_t camera_depth)
 {
 	renderCUDA<NUM_CHANNELS> <<<grid, block>>> (
@@ -473,7 +457,6 @@ void FORWARD::render(
 		out_color,
 		depth,
 		out_depth,
-		clipped,
 		camera_depth);
 }
 
@@ -504,8 +487,7 @@ void FORWARD::preprocess(int P, int D, int M,
 	bool prefiltered,
 	int2* rects,
 	float3 boxmin,
-	float3 boxmax,
-	int* clipped)
+	float3 boxmax)
 {
 	preprocessCUDA<NUM_CHANNELS> << <(P + 255) / 256, 256 >> > (
 		P, D, M,
@@ -535,7 +517,5 @@ void FORWARD::preprocess(int P, int D, int M,
 		prefiltered,
 		rects,
 		boxmin,
-		boxmax,
-		clipped
-		);
+		boxmax);
 }
