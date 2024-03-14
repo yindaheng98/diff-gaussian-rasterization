@@ -166,6 +166,9 @@ __global__ void preprocessCUDA(int P, int D, int M,
 	const float* viewmatrix,
 	const float* projmatrix,
 	const glm::vec3* cam_pos,
+	const int* model_sz,
+	const int* model_active,
+	const int nb_models,
 	const int W, int H,
 	const float tan_fovx, float tan_fovy,
 	const float focal_x, float focal_y,
@@ -186,14 +189,32 @@ __global__ void preprocessCUDA(int P, int D, int M,
 	if (idx >= P)
 		return;
 
+	int midx = 0;
+
+	int splat_count = 0;
+	for (int i = 0; i < nb_models; ++i) {
+		splat_count += model_sz[i];
+		if (idx < splat_count) {
+			midx = i;
+			break;
+		}
+	}
+
+	const float* model_viewmatrix = &(viewmatrix[midx * 16]);
+	const float* model_projmatrix = &(projmatrix[midx * 16]);
+	const glm::vec3* model_cam_pos = (glm::vec3*) &(((float*)cam_pos)[midx * 3]);
+
 	// Initialize radius and touched tiles to 0. If this isn't changed,
 	// this Gaussian will not be processed further.
 	radii[idx] = 0;
 	tiles_touched[idx] = 0;
 
+	if (model_active[midx] == 0)
+		return;
+
 	// Perform near culling, quit if outside.
 	float3 p_view;
-	if (!in_frustum(idx, orig_points, viewmatrix, projmatrix, prefiltered, p_view))
+	if (!in_frustum(idx, orig_points, model_viewmatrix, model_projmatrix, prefiltered, p_view))
 		return;
 
 	// Transform point by projecting
@@ -203,7 +224,7 @@ __global__ void preprocessCUDA(int P, int D, int M,
 		p_orig.x > boxmax.x || p_orig.y > boxmax.y || p_orig.z > boxmax.z)
 		return;
 
-	float4 p_hom = transformPoint4x4(p_orig, projmatrix);
+	float4 p_hom = transformPoint4x4(p_orig, model_projmatrix);
 	float p_w = 1.0f / (p_hom.w + 0.0000001f);
 	float3 p_proj = { p_hom.x * p_w, p_hom.y * p_w, p_hom.z * p_w };
 
@@ -221,7 +242,7 @@ __global__ void preprocessCUDA(int P, int D, int M,
 	}
 
 	// Compute 2D screen-space covariance matrix
-	float3 cov = computeCov2D(p_orig, focal_x, focal_y, tan_fovx, tan_fovy, cov3D, viewmatrix);
+	float3 cov = computeCov2D(p_orig, focal_x, focal_y, tan_fovx, tan_fovy, cov3D, model_viewmatrix);
 
 	// Invert covariance (EWA algorithm)
 	float det = (cov.x * cov.z - cov.y * cov.y);
@@ -260,8 +281,7 @@ __global__ void preprocessCUDA(int P, int D, int M,
 	// spherical harmonics coefficients to RGB color.
 	if (colors_precomp == nullptr)
 	{
-		//TODO: Avoid this if clipped ?
-		glm::vec3 result = computeColorFromSH(idx, D, M, (glm::vec3*)orig_points, *cam_pos, shs, clamped);
+		glm::vec3 result = computeColorFromSH(idx, D, M, (glm::vec3*)orig_points, *model_cam_pos, shs, clamped);
 		rgb[idx * C + 0] = result.x;
 		rgb[idx * C + 1] = result.y;
 		rgb[idx * C + 2] = result.z;
@@ -473,6 +493,9 @@ void FORWARD::preprocess(int P, int D, int M,
 	const float* viewmatrix,
 	const float* projmatrix,
 	const glm::vec3* cam_pos,
+	const int* model_sz,
+	const int* model_active,
+	const int nb_models,
 	const int W, int H,
 	const float focal_x, float focal_y,
 	const float tan_fovx, float tan_fovy,
@@ -503,6 +526,9 @@ void FORWARD::preprocess(int P, int D, int M,
 		viewmatrix, 
 		projmatrix,
 		cam_pos,
+		model_sz,
+		model_active,
+		nb_models,
 		W, H,
 		tan_fovx, tan_fovy,
 		focal_x, focal_y,
