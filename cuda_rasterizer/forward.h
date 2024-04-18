@@ -34,6 +34,7 @@ namespace FORWARD
 		const float* viewmatrix,
 		const float* projmatrix,
 		const glm::vec3* cam_pos,
+		const float* frustums,
 		const int* model_sz,
 		const int* model_active,
 		const int nb_models,
@@ -50,8 +51,8 @@ namespace FORWARD
 		uint32_t* tiles_touched,
 		bool prefiltered,
 		int2* rects,
-		float3 boxmin,
-		float3 boxmax);
+		float* boxmin,
+		float* boxmax);
 
 	// Main rasterization method.
 	void render(

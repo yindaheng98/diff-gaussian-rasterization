@@ -49,22 +49,6 @@ uint32_t getHigherMsb(uint32_t n)
 	return msb;
 }
 
-// Wrapper method to call auxiliary coarse frustum containment test.
-// Mark all Gaussians that pass it.
-__global__ void checkFrustum(int P,
-	const float* orig_points,
-	const float* viewmatrix,
-	const float* projmatrix,
-	bool* present)
-{
-	auto idx = cg::this_grid().thread_rank();
-	if (idx >= P)
-		return;
-
-	float3 p_view;
-	present[idx] = in_frustum(idx, orig_points, viewmatrix, projmatrix, false, p_view);
-}
-
 // Generates one key/value pair for all Gaussian / tile overlaps. 
 // Run once per Gaussian (1:N mapping).
 __global__ void duplicateWithKeys(
@@ -141,21 +125,6 @@ __global__ void identifyTileRanges(int L, uint64_t* point_list_keys, uint2* rang
 		ranges[currtile].y = L;
 }
 
-// Mark Gaussians as visible/invisible, based on view frustum testing
-void CudaRasterizer::Rasterizer::markVisible(
-	int P,
-	float* means3D,
-	float* viewmatrix,
-	float* projmatrix,
-	bool* present)
-{
-	checkFrustum << <(P + 255) / 256, 256 >> > (
-		P,
-		means3D,
-		viewmatrix, projmatrix,
-		present);
-}
-
 CudaRasterizer::GeometryState CudaRasterizer::GeometryState::fromChunk(char*& chunk, size_t P)
 {
 	GeometryState geom;
@@ -218,6 +187,7 @@ int CudaRasterizer::Rasterizer::forward(
 	const float* viewmatrix,
 	const float* projmatrix,
 	const float* cam_pos,
+	const float* frustums,
 	const int* model_sz,
 	const int* model_active,
 	const int nb_models,
@@ -248,6 +218,7 @@ int CudaRasterizer::Rasterizer::forward(
 		viewmatrix,
 		projmatrix,
 		cam_pos,
+		frustums,
 		model_sz,
 		model_active,
 		nb_models,
@@ -310,6 +281,7 @@ int CudaRasterizer::Rasterizer::forward_preprocess(
 	const float* viewmatrix,
 	const float* projmatrix,
 	const float* cam_pos,
+	const float* frustums,
 	const int* model_sz,
 	const int* model_active,
 	const int nb_models,
@@ -345,14 +317,6 @@ int CudaRasterizer::Rasterizer::forward_preprocess(
 		throw std::runtime_error("For non-RGB, provide precomputed Gaussian colors!");
 	}
 
-	float3 minn = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
-	float3 maxx = { FLT_MAX, FLT_MAX, FLT_MAX };
-	if (boxmin != nullptr)
-	{
-		minn = *((float3*)boxmin);
-		maxx = *((float3*)boxmax);
-	}
-
 	// Run preprocessing per-Gaussian (transformation, bounding, conversion of SHs to RGB)
 	FORWARD::preprocess(
 		P, D, M,
@@ -367,6 +331,7 @@ int CudaRasterizer::Rasterizer::forward_preprocess(
 		colors_precomp,
 		viewmatrix, projmatrix,
 		(glm::vec3*)cam_pos,
+		frustums,
 		model_sz,
 		model_active,
 		nb_models,
@@ -383,8 +348,8 @@ int CudaRasterizer::Rasterizer::forward_preprocess(
 		geomState.tiles_touched,
 		prefiltered,
 		(int2*)rects,
-		minn,
-		maxx
+		boxmin,
+		boxmax
 	);
 
 	// Compute prefix sum over full list of touched tile counts by Gaussians

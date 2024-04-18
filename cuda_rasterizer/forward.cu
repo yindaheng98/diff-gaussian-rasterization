@@ -166,6 +166,7 @@ __global__ void preprocessCUDA(int P, int D, int M,
 	const float* viewmatrix,
 	const float* projmatrix,
 	const glm::vec3* cam_pos,
+	const float* frustums,
 	const int* model_sz,
 	const int* model_active,
 	const int nb_models,
@@ -182,8 +183,8 @@ __global__ void preprocessCUDA(int P, int D, int M,
 	uint32_t* tiles_touched,
 	bool prefiltered,
 	int2* rects,
-	float3 boxmin,
-	float3 boxmax)
+	float* boxmin,
+	float* boxmax)
 {
 	auto idx = cg::this_grid().thread_rank();
 	if (idx >= P)
@@ -214,14 +215,16 @@ __global__ void preprocessCUDA(int P, int D, int M,
 
 	// Perform near culling, quit if outside.
 	float3 p_view;
-	if (!in_frustum(idx, orig_points, model_viewmatrix, model_projmatrix, prefiltered, p_view))
+	if (!in_frustum(idx, orig_points, model_viewmatrix, model_projmatrix, prefiltered, p_view, frustums))
 		return;
 
 	// Transform point by projecting
 	float3 p_orig = { orig_points[3 * idx], orig_points[3 * idx + 1], orig_points[3 * idx + 2] };
+	float3 t_boxmin = { boxmin[3 * midx], boxmin[3 * midx + 1], boxmin[3 * midx + 2] };
+	float3 t_boxmax = { boxmax[3 * midx], boxmax[3 * midx + 1], boxmax[3 * midx + 2] };
 
-	if (p_orig.x < boxmin.x || p_orig.y < boxmin.y || p_orig.z < boxmin.z ||
-		p_orig.x > boxmax.x || p_orig.y > boxmax.y || p_orig.z > boxmax.z)
+	if (p_orig.x < t_boxmin.x || p_orig.y < t_boxmin.y || p_orig.z < t_boxmin.z ||
+		p_orig.x > t_boxmax.x || p_orig.y > t_boxmax.y || p_orig.z > t_boxmax.z)
 		return;
 
 	float4 p_hom = transformPoint4x4(p_orig, model_projmatrix);
@@ -493,6 +496,7 @@ void FORWARD::preprocess(int P, int D, int M,
 	const float* viewmatrix,
 	const float* projmatrix,
 	const glm::vec3* cam_pos,
+	const float* frustums,
 	const int* model_sz,
 	const int* model_active,
 	const int nb_models,
@@ -509,8 +513,8 @@ void FORWARD::preprocess(int P, int D, int M,
 	uint32_t* tiles_touched,
 	bool prefiltered,
 	int2* rects,
-	float3 boxmin,
-	float3 boxmax)
+	float* boxmin,
+	float* boxmax)
 {
 	preprocessCUDA<NUM_CHANNELS> << <(P + 255) / 256, 256 >> > (
 		P, D, M,
@@ -526,6 +530,7 @@ void FORWARD::preprocess(int P, int D, int M,
 		viewmatrix, 
 		projmatrix,
 		cam_pos,
+		frustums,
 		model_sz,
 		model_active,
 		nb_models,
