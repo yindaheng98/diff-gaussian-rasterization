@@ -18,8 +18,11 @@
 #include <stdio.h>
 #include <cuda_runtime_api.h>
 #include <memory>
+#include <vector>
 #include "cuda_rasterizer/config.h"
 #include "cuda_rasterizer/rasterizer.h"
+#include "cuda_rasterizer/rasterizer_impl.h"
+#include "cuda_rasterizer/auxiliary.h"
 #include <fstream>
 #include <string>
 #include <functional>
@@ -247,4 +250,30 @@ torch::Tensor markVisible(
   }
   
   return present;
+}
+
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor>
+parseImageBuffer(
+	const torch::Tensor& imageBuffer,
+    const int image_height,
+    const int image_width,
+	bool debug)
+{
+  const int H = image_height;
+  const int W = image_width;
+  const int N = W * H;
+  char* img_buffer = reinterpret_cast<char*>(imageBuffer.contiguous().data_ptr());
+  CudaRasterizer::ImageState imgState = CudaRasterizer::ImageState::fromChunk(img_buffer, N);
+  
+  auto uint_opts = imageBuffer.options().dtype(torch::kUInt32);
+  auto float_opts = imageBuffer.options().dtype(torch::kFloat32);
+  
+  torch::Tensor ranges = torch::full({H, W, 2}, 0.0, uint_opts);
+  torch::Tensor n_contrib = torch::full({H, W}, 0.0, uint_opts);
+  torch::Tensor accum_alpha = torch::full({H, W}, 0.0, float_opts);
+  
+  CHECK_CUDA(cudaMemcpy(ranges.contiguous().data<uint32_t>(), imgState.ranges, sizeof(uint32_t)*2*N, cudaMemcpyDeviceToDevice), debug);
+  CHECK_CUDA(cudaMemcpy(n_contrib.contiguous().data<uint32_t>(), imgState.n_contrib, sizeof(uint32_t)*N, cudaMemcpyDeviceToDevice), debug);
+  CHECK_CUDA(cudaMemcpy(accum_alpha.contiguous().data<float>(), imgState.n_contrib, sizeof(float)*N, cudaMemcpyDeviceToDevice), debug);
+  return std::make_tuple(ranges, n_contrib, accum_alpha);
 }

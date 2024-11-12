@@ -70,3 +70,10 @@ torch::Tensor markVisible(
 		torch::Tensor& means3D,
 		torch::Tensor& viewmatrix,
 		torch::Tensor& projmatrix);
+
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor>
+parseImageBuffer(
+	const torch::Tensor& imageBuffer,
+    const int image_height,
+    const int image_width,
+	bool debug);
