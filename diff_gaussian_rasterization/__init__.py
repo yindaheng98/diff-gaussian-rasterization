@@ -83,12 +83,20 @@ class _RasterizeGaussians(torch.autograd.Function):
 
         # Invoke C++/CUDA rasterizer
         num_rendered, color, radii, geomBuffer, binningBuffer, imgBuffer, invdepths, objpixcorr_id, objpixcorr_alpha = _C.rasterize_gaussians(*args)
+        ranges, n_contrib, accum_alpha = _C.parse_image_buffer(imgBuffer, raster_settings.image_height, raster_settings.image_width, raster_settings.debug)
+        info = dict(
+            objpixcorr_id=objpixcorr_id,
+            objpixcorr_alpha=objpixcorr_alpha,
+            ranges=ranges,
+            n_contrib=n_contrib,
+            accum_alpha=accum_alpha,
+        )
 
         # Keep relevant tensors for backward
         ctx.raster_settings = raster_settings
         ctx.num_rendered = num_rendered
         ctx.save_for_backward(colors_precomp, means3D, scales, rotations, cov3Ds_precomp, radii, sh, opacities, geomBuffer, binningBuffer, imgBuffer)
-        return color, radii, invdepths, objpixcorr_id, objpixcorr_alpha
+        return color, radii, invdepths, info
 
     @staticmethod
     def backward(ctx, grad_out_color, _, grad_out_depth):
