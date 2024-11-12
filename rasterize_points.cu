@@ -69,8 +69,8 @@ RasterizeGaussiansCUDA(
 
   torch::Tensor out_color = torch::full({NUM_CHANNELS, H, W}, 0.0, float_opts);
   torch::Tensor out_invdepth = torch::full({0, H, W}, 0.0, float_opts);
-  torch::Tensor out_objpixcorr_id = torch::full({n_objpixcorr, H, W}, 0.0, int_opts);
-  torch::Tensor out_objpixcorr_alpha = torch::full({n_objpixcorr, H, W}, 0.0, float_opts);
+  torch::Tensor out_objpixcorr_id = torch::full({H, W, n_objpixcorr}, 0.0, int_opts);
+  torch::Tensor out_objpixcorr_alpha = torch::full({H, W, n_objpixcorr}, 0.0, float_opts);
   float* out_invdepthptr = nullptr;
 
   out_invdepth = torch::full({1, H, W}, 0.0, float_opts).contiguous();

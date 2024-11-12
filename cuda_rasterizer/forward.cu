@@ -286,7 +286,7 @@ renderCUDA(
 	float* __restrict__ out_color,
 	const float* __restrict__ depths,
 	float* __restrict__ invdepth,
-	const int log_K_pixel_points,
+	const int K_pixel_points,
 	int* __restrict__ out_pixel_points_id,
 	float* __restrict__ out_pixel_points_alpha)
 {
@@ -314,11 +314,17 @@ renderCUDA(
 	__shared__ float2 collected_xy[BLOCK_SIZE];
 	__shared__ float4 collected_conic_opacity[BLOCK_SIZE];
 
+	// Compute length for top-K list
+	int Kpps = K_pixel_points;
+	int* pps_id = out_pixel_points_id + pix_id * Kpps;
+	float* pps_alpha = out_pixel_points_alpha + pix_id * Kpps;
+
 	// Initialize helper variables
 	float T = 1.0f;
 	uint32_t contributor = 0;
 	uint32_t last_contributor = 0;
 	float C[CHANNELS] = { 0 };
+	int kpps = 0;
 
 	float expected_invdepth = 0.0f;
 
@@ -373,6 +379,60 @@ renderCUDA(
 			// Eq. (3) from 3D Gaussian splatting paper.
 			for (int ch = 0; ch < CHANNELS; ch++)
 				C[ch] += features[collected_id[j] * CHANNELS + ch] * alpha * T;
+
+			// Use a min-heap to keep track of the top-K alpha values
+			if (kpps < Kpps)
+			{
+				// If the heap is not full, add the current point
+				int cur_idx = kpps;
+				pps_alpha[cur_idx] = alpha;
+				pps_id[cur_idx] = collected_id[j];
+				for (int k = 0; k < K_pixel_points; k++)
+				{
+					if (cur_idx == 0) break;
+					int parent = (cur_idx - 1) >> 1;
+					if (pps_alpha[parent] > pps_alpha[cur_idx])
+					{
+						// If the parent is smaller, swap current with parent
+						float tmp_alpha = pps_alpha[cur_idx];
+						int tmp_id = pps_id[cur_idx];
+                    	pps_alpha[cur_idx] = pps_alpha[parent];
+                    	pps_id[cur_idx] = pps_id[parent];
+                    	pps_alpha[parent] = tmp_alpha;
+                    	pps_id[parent] = tmp_id;
+                    	cur_idx = parent;
+					}
+					else break;
+				}
+				kpps++;
+			}
+			else if (alpha > pps_alpha[0])
+			{
+				int cur_idx = 0;
+				int next = 0;
+				pps_alpha[0] = alpha;
+				pps_id[0] = collected_id[j];
+				for (int k = 0; k < K_pixel_points; k++)
+				{
+					int l_idx = (cur_idx << 1) + 1;
+					int r_idx = (cur_idx << 1) + 2;
+					if (l_idx >= Kpps) break;
+					else if (pps_alpha[l_idx] < pps_alpha[r_idx]) next = l_idx;
+					else next = r_idx;
+					if (pps_alpha[next] < pps_alpha[cur_idx])
+					{
+						// If the child is larger, swap current with child
+						float tmp_alpha = pps_alpha[cur_idx];
+						int tmp_id = pps_id[cur_idx];
+						pps_alpha[cur_idx] = pps_alpha[next];
+						pps_id[cur_idx] = pps_id[next];
+						pps_alpha[next] = tmp_alpha;
+						pps_id[next] = tmp_id;
+						cur_idx = next;
+					}
+					else break;
+				}
+			}
 
 			if(invdepth)
 			expected_invdepth += (1 / depths[collected_id[j]]) * alpha * T;
