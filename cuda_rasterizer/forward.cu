@@ -285,7 +285,10 @@ renderCUDA(
 	const float* __restrict__ bg_color,
 	float* __restrict__ out_color,
 	const float* __restrict__ depths,
-	float* __restrict__ invdepth)
+	float* __restrict__ invdepth,
+	const int log_K_pixel_points,
+	int* __restrict__ out_pixel_points_id,
+	float* __restrict__ out_pixel_points_alpha)
 {
 	// Identify current tile and associated min/max pixel range.
 	auto block = cg::this_thread_block();
@@ -426,7 +429,10 @@ void FORWARD::render(
 		bg_color,
 		out_color,
 		depths, 
-		depth);
+		depth,
+		log_K_pixel_points,
+		out_pixel_points_id,
+		out_pixel_points_alpha);
 }
 
 void FORWARD::preprocess(int P, int D, int M,
