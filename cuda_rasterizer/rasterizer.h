@@ -51,6 +51,9 @@ namespace CudaRasterizer
 			float* out_color,
 			float* depth,
 			bool antialiasing,
+			const int n_objpixcorr,
+			int* out_objpixcorr_id,
+			float* out_objpixcorr_alpha,
 			int* radii = nullptr,
 			bool debug = false);
 

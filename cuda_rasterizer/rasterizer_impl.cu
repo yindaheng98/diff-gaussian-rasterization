@@ -218,6 +218,9 @@ int CudaRasterizer::Rasterizer::forward(
 	float* out_color,
 	float* depth,
 	bool antialiasing,
+	const int n_objpixcorr,
+	int* out_objpixcorr_id,
+	float* out_objpixcorr_alpha,
 	int* radii,
 	bool debug)
 {
@@ -335,7 +338,10 @@ int CudaRasterizer::Rasterizer::forward(
 		background,
 		out_color,
 		geomState.depths,
-		depth), debug)
+		depth,
+		n_objpixcorr,
+		out_objpixcorr_id,
+		out_objpixcorr_alpha), debug)
 
 	return num_rendered;
 }
