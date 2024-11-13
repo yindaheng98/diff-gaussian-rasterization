@@ -473,7 +473,7 @@ void FORWARD::render(
 	float* out_color,
 	float* depths,
 	float* depth,
-	const int log_K_pixel_points,
+	const int K_pixel_points,
 	int* out_pixel_points_id,
 	float* out_pixel_points_alpha)
 {
@@ -490,7 +490,7 @@ void FORWARD::render(
 		out_color,
 		depths, 
 		depth,
-		log_K_pixel_points,
+		K_pixel_points,
 		out_pixel_points_id,
 		out_pixel_points_alpha);
 }
