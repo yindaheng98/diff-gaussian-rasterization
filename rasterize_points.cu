@@ -268,11 +268,12 @@ parseImageBuffer(
   auto uint_opts = imageBuffer.options().dtype(torch::kUInt32);
   auto float_opts = imageBuffer.options().dtype(torch::kFloat32);
   
-  torch::Tensor ranges = torch::full({H, W, 2}, 0.0, uint_opts);
-  torch::Tensor n_contrib = torch::full({H, W}, 0.0, uint_opts);
+  dim3 tile_grid((W + BLOCK_X - 1) / BLOCK_X, (H + BLOCK_Y - 1) / BLOCK_Y, 1);
+  torch::Tensor ranges = torch::full({tile_grid.y, tile_grid.x, 2}, 0, uint_opts);
+  torch::Tensor n_contrib = torch::full({H, W}, 0, uint_opts);
   torch::Tensor accum_alpha = torch::full({H, W}, 0.0, float_opts);
   
-  CHECK_CUDA(cudaMemcpy(ranges.contiguous().data<uint32_t>(), imgState.ranges, sizeof(uint32_t)*2*N, cudaMemcpyDeviceToDevice), debug);
+  CHECK_CUDA(cudaMemcpy(ranges.contiguous().data<uint32_t>(), imgState.ranges, sizeof(uint2)*tile_grid.y*tile_grid.x, cudaMemcpyDeviceToDevice), debug);
   CHECK_CUDA(cudaMemcpy(n_contrib.contiguous().data<uint32_t>(), imgState.n_contrib, sizeof(uint32_t)*N, cudaMemcpyDeviceToDevice), debug);
   CHECK_CUDA(cudaMemcpy(accum_alpha.contiguous().data<float>(), imgState.accum_alpha, sizeof(float)*N, cudaMemcpyDeviceToDevice), debug);
   return std::make_tuple(ranges, n_contrib, accum_alpha);
