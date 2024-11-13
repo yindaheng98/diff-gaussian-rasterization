@@ -274,6 +274,6 @@ parseImageBuffer(
   
   CHECK_CUDA(cudaMemcpy(ranges.contiguous().data<uint32_t>(), imgState.ranges, sizeof(uint32_t)*2*N, cudaMemcpyDeviceToDevice), debug);
   CHECK_CUDA(cudaMemcpy(n_contrib.contiguous().data<uint32_t>(), imgState.n_contrib, sizeof(uint32_t)*N, cudaMemcpyDeviceToDevice), debug);
-  CHECK_CUDA(cudaMemcpy(accum_alpha.contiguous().data<float>(), imgState.n_contrib, sizeof(float)*N, cudaMemcpyDeviceToDevice), debug);
+  CHECK_CUDA(cudaMemcpy(accum_alpha.contiguous().data<float>(), imgState.accum_alpha, sizeof(float)*N, cudaMemcpyDeviceToDevice), debug);
   return std::make_tuple(ranges, n_contrib, accum_alpha);
 }
