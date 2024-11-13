@@ -316,8 +316,8 @@ renderCUDA(
 
 	// Compute length for top-K list
 	int Kpps = K_pixel_points;
-	int* pps_id = out_pixel_points_id + pix_id * Kpps;
 	float* pps_alpha = out_pixel_points_alpha + pix_id * Kpps;
+	int* pps_id = out_pixel_points_id + pix_id * Kpps;
 
 	// Initialize helper variables
 	float T = 1.0f;
@@ -417,7 +417,7 @@ renderCUDA(
 					int l_idx = (cur_idx << 1) + 1;
 					int r_idx = (cur_idx << 1) + 2;
 					if (l_idx >= Kpps) break;
-					else if (pps_alpha[l_idx] < pps_alpha[r_idx]) next = l_idx;
+					else if (r_idx >= Kpps || pps_alpha[l_idx] < pps_alpha[r_idx]) next = l_idx;
 					else next = r_idx;
 					if (pps_alpha[next] < pps_alpha[cur_idx])
 					{

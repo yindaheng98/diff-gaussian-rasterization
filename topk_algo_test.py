@@ -1,7 +1,7 @@
-def topk(seq, log_K_pixel_points):
+def topk(seq, K_pixel_points):
     collected_id = [None]
     j = 0
-    Kpps = (1 << log_K_pixel_points) - 1
+    Kpps = K_pixel_points
     pps_alpha = [None] * Kpps
     pps_id = [None] * Kpps
     kpps = 0
@@ -12,7 +12,7 @@ def topk(seq, log_K_pixel_points):
             cur_idx = kpps
             pps_alpha[cur_idx] = alpha
             pps_id[cur_idx] = collected_id[j]
-            for k in range(log_K_pixel_points):
+            for k in range(K_pixel_points):
                 if cur_idx == 0:
                     break
                 parent = (cur_idx - 1) >> 1
@@ -33,12 +33,12 @@ def topk(seq, log_K_pixel_points):
             next = 0
             pps_alpha[0] = alpha
             pps_id[0] = collected_id[j]
-            for k in range(log_K_pixel_points):
+            for k in range(K_pixel_points):
                 l_idx = (cur_idx << 1) + 1
                 r_idx = (cur_idx << 1) + 2
                 if l_idx >= Kpps:
                     break
-                elif pps_alpha[l_idx] < pps_alpha[r_idx]:
+                elif r_idx >= Kpps or pps_alpha[l_idx] < pps_alpha[r_idx]:
                     next = l_idx
                 else:
                     next = r_idx
@@ -57,7 +57,7 @@ def topk(seq, log_K_pixel_points):
 import numpy as np
 
 seq = np.random.rand(1000)
-log_K_pixel_points = 4
-print(topk(seq, log_K_pixel_points))
-print(np.argsort(seq)[::-1][:(1 << log_K_pixel_points) - 1])
-print(np.sort(seq)[::-1][:(1 << log_K_pixel_points) - 1])
+K_pixel_points = 8
+print(topk(seq, K_pixel_points))
+print(np.argsort(seq)[::-1][:K_pixel_points])
+print(np.sort(seq)[::-1][:K_pixel_points])
