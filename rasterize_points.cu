@@ -252,7 +252,7 @@ torch::Tensor markVisible(
   return present;
 }
 
-std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
 parseBinningBuffer(
 	const torch::Tensor& binningBuffer,
     const int num_rendered,
@@ -262,6 +262,7 @@ parseBinningBuffer(
   CudaRasterizer::BinningState binningState = CudaRasterizer::BinningState::fromChunk(binning_buffer, num_rendered);
   
   auto uint_opts = binningBuffer.options().dtype(torch::kUInt32);
+  auto float_opts = binningBuffer.options().dtype(torch::kFloat32);
   
   torch::Tensor point_list_keys_unsorted = torch::full({num_rendered, 2}, 0, uint_opts);
   torch::Tensor point_list_keys = torch::full({num_rendered, 2}, 0, uint_opts);
@@ -272,7 +273,17 @@ parseBinningBuffer(
   CHECK_CUDA(cudaMemcpy(point_list_keys.contiguous().data<uint32_t>(), binningState.point_list_keys, sizeof(uint32_t)*num_rendered*2, cudaMemcpyDeviceToDevice), debug);
   CHECK_CUDA(cudaMemcpy(point_list_unsorted.contiguous().data<uint32_t>(), binningState.point_list_unsorted, sizeof(uint32_t)*num_rendered, cudaMemcpyDeviceToDevice), debug);
   CHECK_CUDA(cudaMemcpy(point_list.contiguous().data<uint32_t>(), binningState.point_list, sizeof(uint32_t)*num_rendered, cudaMemcpyDeviceToDevice), debug);
-  return std::make_tuple(point_list_keys_unsorted, point_list_keys, point_list_unsorted, point_list);
+
+  torch::Tensor point_list_depth_unsorted = torch::full({num_rendered}, 0, float_opts); // point_list_depth_unsorted = point_list_keys_unsorted[:, 0]
+  torch::Tensor point_list_tileid_unsorted = torch::full({num_rendered}, 0, uint_opts); // point_list_tileid_unsorted = point_list_keys_unsorted[:, 1]
+  torch::Tensor point_list_depth = torch::full({num_rendered}, 0, float_opts); // point_list_depth = point_list_keys[:, 0]
+  torch::Tensor point_list_tileid = torch::full({num_rendered}, 0, uint_opts); // point_list_tileid = point_list_keys[:, 1]
+  
+  CHECK_CUDA(cudaMemcpy(point_list_depth_unsorted.contiguous().data_ptr(), point_list_keys_unsorted.index({"...", 0}).contiguous().data_ptr(), sizeof(uint32_t)*num_rendered, cudaMemcpyDeviceToDevice), debug);
+  CHECK_CUDA(cudaMemcpy(point_list_tileid_unsorted.contiguous().data_ptr(), point_list_keys_unsorted.index({"...", 1}).contiguous().data_ptr(), sizeof(uint32_t)*num_rendered, cudaMemcpyDeviceToDevice), debug);
+  CHECK_CUDA(cudaMemcpy(point_list_depth.contiguous().data_ptr(), point_list_keys.index({"...", 0}).contiguous().data_ptr(), sizeof(uint32_t)*num_rendered, cudaMemcpyDeviceToDevice), debug);
+  CHECK_CUDA(cudaMemcpy(point_list_tileid.contiguous().data_ptr(), point_list_keys.index({"...", 1}).contiguous().data_ptr(), sizeof(uint32_t)*num_rendered, cudaMemcpyDeviceToDevice), debug);
+  return std::make_tuple(point_list_keys_unsorted, point_list_keys, point_list_unsorted, point_list, point_list_depth_unsorted, point_list_tileid_unsorted, point_list_depth, point_list_tileid);
 }
 
 std::tuple<torch::Tensor, torch::Tensor, torch::Tensor>
