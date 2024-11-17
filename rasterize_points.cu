@@ -252,6 +252,29 @@ torch::Tensor markVisible(
   return present;
 }
 
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
+parseBinningBuffer(
+	const torch::Tensor& binningBuffer,
+    const int num_rendered,
+	bool debug)
+{
+  char* binning_buffer = reinterpret_cast<char*>(binningBuffer.contiguous().data_ptr());
+  CudaRasterizer::BinningState binningState = CudaRasterizer::BinningState::fromChunk(binning_buffer, num_rendered);
+  
+  auto uint_opts = binningBuffer.options().dtype(torch::kUInt32);
+  
+  torch::Tensor point_list_keys_unsorted = torch::full({num_rendered, 2}, 0, uint_opts);
+  torch::Tensor point_list_keys = torch::full({num_rendered, 2}, 0, uint_opts);
+  torch::Tensor point_list_unsorted = torch::full({num_rendered}, 0, uint_opts);
+  torch::Tensor point_list = torch::full({num_rendered}, 0, uint_opts);
+  
+  CHECK_CUDA(cudaMemcpy(point_list_keys_unsorted.contiguous().data<uint32_t>(), binningState.point_list_keys_unsorted, sizeof(uint32_t)*num_rendered*2, cudaMemcpyDeviceToDevice), debug);
+  CHECK_CUDA(cudaMemcpy(point_list_keys.contiguous().data<uint32_t>(), binningState.point_list_keys, sizeof(uint32_t)*num_rendered*2, cudaMemcpyDeviceToDevice), debug);
+  CHECK_CUDA(cudaMemcpy(point_list_unsorted.contiguous().data<uint32_t>(), binningState.point_list_unsorted, sizeof(uint32_t)*num_rendered, cudaMemcpyDeviceToDevice), debug);
+  CHECK_CUDA(cudaMemcpy(point_list.contiguous().data<uint32_t>(), binningState.point_list, sizeof(uint32_t)*num_rendered, cudaMemcpyDeviceToDevice), debug);
+  return std::make_tuple(point_list_keys_unsorted, point_list_keys, point_list_unsorted, point_list);
+}
+
 std::tuple<torch::Tensor, torch::Tensor, torch::Tensor>
 parseImageBuffer(
 	const torch::Tensor& imageBuffer,

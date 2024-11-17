@@ -71,6 +71,12 @@ torch::Tensor markVisible(
 		torch::Tensor& viewmatrix,
 		torch::Tensor& projmatrix);
 
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
+parseBinningBuffer(
+	const torch::Tensor& binningBuffer,
+    const int num_rendered,
+	bool debug);
+
 std::tuple<torch::Tensor, torch::Tensor, torch::Tensor>
 parseImageBuffer(
 	const torch::Tensor& imageBuffer,
