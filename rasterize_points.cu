@@ -272,7 +272,7 @@ parseGeomBuffer(
   return std::make_tuple(point_offsets, tiles_touched);
 }
 
-std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
 parseBinningBuffer(
 	const torch::Tensor& binningBuffer,
     const int num_rendered,
@@ -303,7 +303,7 @@ parseBinningBuffer(
   CHECK_CUDA(cudaMemcpy(point_list_tileid_unsorted.contiguous().data_ptr(), point_list_keys_unsorted.index({"...", 1}).contiguous().data_ptr(), sizeof(uint32_t)*num_rendered, cudaMemcpyDeviceToDevice), debug);
   CHECK_CUDA(cudaMemcpy(point_list_depth.contiguous().data_ptr(), point_list_keys.index({"...", 0}).contiguous().data_ptr(), sizeof(uint32_t)*num_rendered, cudaMemcpyDeviceToDevice), debug);
   CHECK_CUDA(cudaMemcpy(point_list_tileid.contiguous().data_ptr(), point_list_keys.index({"...", 1}).contiguous().data_ptr(), sizeof(uint32_t)*num_rendered, cudaMemcpyDeviceToDevice), debug);
-  return std::make_tuple(point_list_keys_unsorted, point_list_keys, point_list_unsorted, point_list, point_list_depth_unsorted, point_list_tileid_unsorted, point_list_depth, point_list_tileid);
+  return std::make_tuple(point_list_unsorted, point_list, point_list_depth_unsorted, point_list_tileid_unsorted, point_list_depth, point_list_tileid);
 }
 
 std::tuple<torch::Tensor, torch::Tensor, torch::Tensor>

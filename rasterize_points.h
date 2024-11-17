@@ -77,7 +77,7 @@ parseGeomBuffer(
     const int P,
 	bool debug);
 
-std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
 parseBinningBuffer(
 	const torch::Tensor& binningBuffer,
     const int num_rendered,
