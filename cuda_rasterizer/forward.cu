@@ -285,7 +285,12 @@ renderCUDA(
 	const float* __restrict__ bg_color,
 	float* __restrict__ out_color,
 	const float* __restrict__ depths,
-	float* __restrict__ invdepth)
+	float* __restrict__ invdepth,
+	const int n_features,
+	const float fusion_alpha_threshold,
+	float* __restrict__ feature_map,
+	float* __restrict__ out_feature,
+	float* __restrict__ out_feature_alpha)
 {
 	// Identify current tile and associated min/max pixel range.
 	auto block = cg::this_thread_block();
@@ -409,7 +414,12 @@ void FORWARD::render(
 	const float* bg_color,
 	float* out_color,
 	float* depths,
-	float* depth)
+	float* depth,
+	const int n_features,
+	const float fusion_alpha_threshold,
+	float* feature_map,
+	float* out_feature,
+	float* out_feature_alpha)
 {
 	renderCUDA<NUM_CHANNELS> << <grid, block >> > (
 		ranges,
@@ -423,7 +433,12 @@ void FORWARD::render(
 		bg_color,
 		out_color,
 		depths, 
-		depth);
+		depth,
+		n_features,
+		fusion_alpha_threshold,
+		feature_map,
+		out_feature,
+		out_feature_alpha);
 }
 
 void FORWARD::preprocess(int P, int D, int M,

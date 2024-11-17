@@ -32,7 +32,7 @@ std::function<char*(size_t N)> resizeFunctional(torch::Tensor& t) {
     return lambda;
 }
 
-std::tuple<int, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
+std::tuple<int, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
 RasterizeGaussiansCUDA(
 	const torch::Tensor& background,
 	const torch::Tensor& means3D,
@@ -51,6 +51,8 @@ RasterizeGaussiansCUDA(
 	const torch::Tensor& sh,
 	const int degree,
 	const torch::Tensor& campos,
+	const float fusion_alpha_threshold,
+	const torch::Tensor& feature_map,
 	const bool prefiltered,
 	const bool antialiasing,
 	const bool debug)
@@ -63,11 +65,18 @@ RasterizeGaussiansCUDA(
   const int H = image_height;
   const int W = image_width;
 
+  if (feature_map.ndimension() != 2) {
+    AT_ERROR("feature_map must have dimensions (num_points, num_features)");
+  }
+  const int n_features = feature_map.size(1);
+
   auto int_opts = means3D.options().dtype(torch::kInt32);
   auto float_opts = means3D.options().dtype(torch::kFloat32);
 
   torch::Tensor out_color = torch::full({NUM_CHANNELS, H, W}, 0.0, float_opts);
   torch::Tensor out_invdepth = torch::full({0, H, W}, 0.0, float_opts);
+  torch::Tensor out_feature = torch::full({P, n_features}, 0.0, float_opts);
+  torch::Tensor out_feature_alpha = torch::full({P, n_features}, 0.0, float_opts);
   float* out_invdepthptr = nullptr;
 
   out_invdepth = torch::full({1, H, W}, 0.0, float_opts).contiguous();
@@ -117,10 +126,15 @@ RasterizeGaussiansCUDA(
 		out_color.contiguous().data<float>(),
 		out_invdepthptr,
 		antialiasing,
+		n_features,
+		fusion_alpha_threshold,
+		feature_map.contiguous().data<float>(),
+		out_feature.contiguous().data<float>(),
+		out_feature_alpha.contiguous().data<float>(),
 		radii.contiguous().data<int>(),
 		debug);
   }
-  return std::make_tuple(rendered, out_color, radii, geomBuffer, binningBuffer, imgBuffer, out_invdepth);
+  return std::make_tuple(rendered, out_color, radii, geomBuffer, binningBuffer, imgBuffer, out_invdepth, out_feature, out_feature_alpha);
 }
 
 std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>

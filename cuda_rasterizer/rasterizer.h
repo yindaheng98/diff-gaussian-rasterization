@@ -51,6 +51,11 @@ namespace CudaRasterizer
 			float* out_color,
 			float* depth,
 			bool antialiasing,
+			const int n_features,
+			const float fusion_alpha_threshold,
+			float* feature_map,
+			float* out_feature,
+			float* out_feature_alpha,
 			int* radii = nullptr,
 			bool debug = false);
 

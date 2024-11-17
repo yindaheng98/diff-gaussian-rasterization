@@ -19,6 +19,7 @@ def cpu_deep_copy_tuple(input_tuple):
     return tuple(copied_tensors)
 
 def rasterize_gaussians(
+    feature_map,
     means3D,
     means2D,
     sh,
@@ -30,6 +31,7 @@ def rasterize_gaussians(
     raster_settings,
 ):
     return _RasterizeGaussians.apply(
+        feature_map,
         means3D,
         means2D,
         sh,
@@ -45,6 +47,7 @@ class _RasterizeGaussians(torch.autograd.Function):
     @staticmethod
     def forward(
         ctx,
+        feature_map,
         means3D,
         means2D,
         sh,
@@ -75,22 +78,24 @@ class _RasterizeGaussians(torch.autograd.Function):
             sh,
             raster_settings.sh_degree,
             raster_settings.campos,
+            raster_settings.fusion_alpha_threshold,
+            feature_map,
             raster_settings.prefiltered,
             raster_settings.antialiasing,
             raster_settings.debug
         )
 
         # Invoke C++/CUDA rasterizer
-        num_rendered, color, radii, geomBuffer, binningBuffer, imgBuffer, invdepths = _C.rasterize_gaussians(*args)
+        num_rendered, color, radii, geomBuffer, binningBuffer, imgBuffer, invdepths, features, features_alpha = _C.rasterize_gaussians(*args)
 
         # Keep relevant tensors for backward
         ctx.raster_settings = raster_settings
         ctx.num_rendered = num_rendered
         ctx.save_for_backward(colors_precomp, means3D, scales, rotations, cov3Ds_precomp, radii, sh, opacities, geomBuffer, binningBuffer, imgBuffer)
-        return color, radii, invdepths
+        return color, radii, invdepths, features, features_alpha
 
     @staticmethod
-    def backward(ctx, grad_out_color, _, grad_out_depth):
+    def backward(ctx, grad_out_color, _, grad_out_depth, __, ___):
 
         # Restore necessary values from context
         num_rendered = ctx.num_rendered
@@ -154,6 +159,7 @@ class GaussianRasterizationSettings(NamedTuple):
     prefiltered : bool
     debug : bool
     antialiasing : bool
+    fusion_alpha_threshold : float = 0.0
 
 class GaussianRasterizer(nn.Module):
     def __init__(self, raster_settings):
@@ -171,7 +177,7 @@ class GaussianRasterizer(nn.Module):
             
         return visible
 
-    def forward(self, means3D, means2D, opacities, shs = None, colors_precomp = None, scales = None, rotations = None, cov3D_precomp = None):
+    def forward(self, feature_map, means3D, means2D, opacities, shs = None, colors_precomp = None, scales = None, rotations = None, cov3D_precomp = None):
         
         raster_settings = self.raster_settings
 
@@ -195,6 +201,7 @@ class GaussianRasterizer(nn.Module):
 
         # Invoke C++/CUDA rasterization routine
         return rasterize_gaussians(
+            feature_map,
             means3D,
             means2D,
             shs,

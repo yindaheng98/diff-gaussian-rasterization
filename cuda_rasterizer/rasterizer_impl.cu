@@ -218,6 +218,11 @@ int CudaRasterizer::Rasterizer::forward(
 	float* out_color,
 	float* depth,
 	bool antialiasing,
+	const int n_features,
+	const float fusion_alpha_threshold,
+	float* feature_map,
+	float* out_feature,
+	float* out_feature_alpha,
 	int* radii,
 	bool debug)
 {
@@ -335,7 +340,12 @@ int CudaRasterizer::Rasterizer::forward(
 		background,
 		out_color,
 		geomState.depths,
-		depth), debug)
+		depth,
+		n_features,
+		fusion_alpha_threshold,
+		feature_map,
+		out_feature,
+		out_feature_alpha), debug)
 
 	return num_rendered;
 }
