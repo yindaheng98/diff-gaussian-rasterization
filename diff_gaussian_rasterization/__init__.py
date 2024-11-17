@@ -83,10 +83,13 @@ class _RasterizeGaussians(torch.autograd.Function):
 
         # Invoke C++/CUDA rasterizer
         num_rendered, color, radii, geomBuffer, binningBuffer, imgBuffer, invdepths, objpixcorr_id, objpixcorr_alpha = _C.rasterize_gaussians(*args)
+        point_offsets, tiles_touched = _C.parse_geom_buffer(geomBuffer, means3D.shape[0], raster_settings.debug)
         (point_list_keys_unsorted, point_list_keys, point_list_unsorted, point_list,
          point_list_depth_unsorted, point_list_tileid_unsorted, point_list_depth, point_list_tileid) = _C.parse_binning_buffer(binningBuffer, num_rendered, raster_settings.debug)
         ranges, n_contrib, accum_alpha = _C.parse_image_buffer(imgBuffer, raster_settings.image_height, raster_settings.image_width, raster_settings.debug)
         info = dict(
+            point_offsets=point_offsets,
+            tiles_touched=tiles_touched,
             point_list_keys_unsorted=point_list_keys_unsorted,
             point_list_keys=point_list_keys,
             point_list_unsorted=point_list_unsorted,

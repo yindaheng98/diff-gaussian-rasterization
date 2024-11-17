@@ -252,6 +252,26 @@ torch::Tensor markVisible(
   return present;
 }
 
+std::tuple<torch::Tensor, torch::Tensor>
+parseGeomBuffer(
+	const torch::Tensor& geomBuffer,
+    const int P,
+	bool debug)
+{
+  char* geom_buffer = reinterpret_cast<char*>(geomBuffer.contiguous().data_ptr());
+  CudaRasterizer::GeometryState geomState = CudaRasterizer::GeometryState::fromChunk(geom_buffer, P);
+  
+  auto uint_opts = geomBuffer.options().dtype(torch::kUInt32);
+  auto float_opts = geomBuffer.options().dtype(torch::kFloat32);
+
+  torch::Tensor point_offsets = torch::full({P}, 0, uint_opts);
+  torch::Tensor tiles_touched = torch::full({P}, 0, uint_opts);
+  
+  CHECK_CUDA(cudaMemcpy(point_offsets.contiguous().data<uint32_t>(), geomState.point_offsets, sizeof(uint32_t)*P, cudaMemcpyDeviceToDevice), debug);
+  CHECK_CUDA(cudaMemcpy(tiles_touched.contiguous().data<uint32_t>(), geomState.tiles_touched, sizeof(uint32_t)*P, cudaMemcpyDeviceToDevice), debug);
+  return std::make_tuple(point_offsets, tiles_touched);
+}
+
 std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
 parseBinningBuffer(
 	const torch::Tensor& binningBuffer,
