@@ -301,6 +301,8 @@ renderCUDA(
 	uint32_t pix_id = W * pix.y + pix.x;
 	float2 pixf = { (float)pix.x, (float)pix.y };
 
+	float* pix_feature_map = feature_map + pix_id * n_features;
+
 	// Check if this thread is associated with a valid pixel or outside.
 	bool inside = pix.x < W&& pix.y < H;
 	// Done threads can help with fetching, but don't rasterize
@@ -375,6 +377,11 @@ renderCUDA(
 			// Eq. (3) from 3D Gaussian splatting paper.
 			for (int ch = 0; ch < CHANNELS; ch++)
 				C[ch] += features[collected_id[j] * CHANNELS + ch] * alpha * T;
+
+			// Feature fusion.
+			for (int ch = 0; ch < n_features; ch++)
+				atomicAdd(&(out_feature[collected_id[j] * n_features + ch]), pix_feature_map[ch] * alpha * T);
+			atomicAdd(&(out_feature_alpha[collected_id[j]]), alpha * T);
 
 			if(invdepth)
 			expected_invdepth += (1 / depths[collected_id[j]]) * alpha * T;

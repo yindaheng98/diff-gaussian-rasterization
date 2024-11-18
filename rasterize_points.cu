@@ -65,10 +65,10 @@ RasterizeGaussiansCUDA(
   const int H = image_height;
   const int W = image_width;
 
-  if (feature_map.ndimension() != 2) {
-    AT_ERROR("feature_map must have dimensions (num_points, num_features)");
+  if (feature_map.ndimension() != 3 || feature_map.size(0) != image_height || feature_map.size(1) != image_width) {
+    AT_ERROR("feature_map must have dimensions (image_height, image_width, num_features)");
   }
-  const int n_features = feature_map.size(1);
+  const int n_features = feature_map.size(2);
 
   auto int_opts = means3D.options().dtype(torch::kInt32);
   auto float_opts = means3D.options().dtype(torch::kFloat32);
@@ -76,7 +76,7 @@ RasterizeGaussiansCUDA(
   torch::Tensor out_color = torch::full({NUM_CHANNELS, H, W}, 0.0, float_opts);
   torch::Tensor out_invdepth = torch::full({0, H, W}, 0.0, float_opts);
   torch::Tensor out_feature = torch::full({P, n_features}, 0.0, float_opts);
-  torch::Tensor out_feature_alpha = torch::full({P, n_features}, 0.0, float_opts);
+  torch::Tensor out_feature_alpha = torch::full({P}, 0.0, float_opts);
   float* out_invdepthptr = nullptr;
 
   out_invdepth = torch::full({1, H, W}, 0.0, float_opts).contiguous();
