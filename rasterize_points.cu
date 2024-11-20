@@ -137,7 +137,7 @@ RasterizeGaussiansCUDA(
   return std::make_tuple(rendered, out_color, radii, geomBuffer, binningBuffer, imgBuffer, out_invdepth, out_feature, out_feature_alpha);
 }
 
-std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
  RasterizeGaussiansBackwardCUDA(
  	const torch::Tensor& background,
 	const torch::Tensor& means3D,
@@ -161,6 +161,8 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
 	const int R,
 	const torch::Tensor& binningBuffer,
 	const torch::Tensor& imageBuffer,
+	const float fusion_alpha_threshold,
+	const torch::Tensor& motion_map,
 	const bool antialiasing,
 	const bool debug)
 {
@@ -174,6 +176,10 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
 	M = sh.size(1);
   }
 
+  if (motion_map.ndimension() != 3 || motion_map.size(0) != H || motion_map.size(1) != W || motion_map.size(2) != 2) {
+    AT_ERROR("feature_map must have dimensions (image_height, image_width, 2)");
+  }
+
   torch::Tensor dL_dmeans3D = torch::zeros({P, 3}, means3D.options());
   torch::Tensor dL_dmeans2D = torch::zeros({P, 3}, means3D.options());
   torch::Tensor dL_dcolors = torch::zeros({P, NUM_CHANNELS}, means3D.options());
@@ -184,6 +190,7 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
   torch::Tensor dL_dscales = torch::zeros({P, 3}, means3D.options());
   torch::Tensor dL_drotations = torch::zeros({P, 4}, means3D.options());
   torch::Tensor dL_dinvdepths = torch::zeros({0, 1}, means3D.options());
+  torch::Tensor transform2d = torch::zeros({P, 6}, means3D.options());
   
   float* dL_dinvdepthsptr = nullptr;
   float* dL_dout_invdepthptr = nullptr;
@@ -229,11 +236,14 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
 	  dL_dsh.contiguous().data<float>(),
 	  dL_dscales.contiguous().data<float>(),
 	  dL_drotations.contiguous().data<float>(),
+	  fusion_alpha_threshold,
+	  motion_map.contiguous().data<float>(),
+	  transform2d.contiguous().data<float>(),
 	  antialiasing,
 	  debug);
   }
 
-  return std::make_tuple(dL_dmeans2D, dL_dcolors, dL_dopacity, dL_dmeans3D, dL_dcov3D, dL_dsh, dL_dscales, dL_drotations);
+  return std::make_tuple(dL_dmeans2D, dL_dcolors, dL_dopacity, dL_dmeans3D, dL_dcov3D, dL_dsh, dL_dscales, dL_drotations, transform2d);
 }
 
 torch::Tensor markVisible(

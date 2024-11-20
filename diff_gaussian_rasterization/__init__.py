@@ -125,13 +125,16 @@ class _RasterizeGaussians(torch.autograd.Function):
                 num_rendered,
                 binningBuffer,
                 imgBuffer,
+                0.0,
+                torch.zeros((*grad_out_color.shape[1:], 2), dtype=torch.float, device=grad_out_color.device),
                 raster_settings.antialiasing,
                 raster_settings.debug)
 
         # Compute gradients for relevant tensors by invoking backward method
-        grad_means2D, grad_colors_precomp, grad_opacities, grad_means3D, grad_cov3Ds_precomp, grad_sh, grad_scales, grad_rotations = _C.rasterize_gaussians_backward(*args)        
+        grad_means2D, grad_colors_precomp, grad_opacities, grad_means3D, grad_cov3Ds_precomp, grad_sh, grad_scales, grad_rotations, _ = _C.pixel_motion_fusion(*args)        
 
         grads = (
+            None,
             grad_means3D,
             grad_means2D,
             grad_sh,

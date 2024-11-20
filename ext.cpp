@@ -14,6 +14,6 @@
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("pixel_feature_fusion", &RasterizeGaussiansCUDA);
-  m.def("rasterize_gaussians_backward", &RasterizeGaussiansBackwardCUDA);
+  m.def("pixel_motion_fusion", &RasterizeGaussiansBackwardCUDA);
   m.def("mark_visible", &markVisible);
 }
