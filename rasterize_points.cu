@@ -176,7 +176,7 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
   torch::Tensor dL_dscales = torch::zeros({P, 3}, means3D.options());
   torch::Tensor dL_drotations = torch::zeros({P, 4}, means3D.options());
   torch::Tensor dL_dinvdepths = torch::zeros({0, 1}, means3D.options());
-  torch::Tensor transform2d = torch::zeros({P, 6}, means3D.options());
+  torch::Tensor transform2d = torch::zeros({P, 2, 3}, means3D.options());
   
   float* dL_dinvdepthsptr = nullptr;
   float* dL_dout_invdepthptr = nullptr;
