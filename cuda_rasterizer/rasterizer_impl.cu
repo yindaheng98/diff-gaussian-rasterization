@@ -464,5 +464,7 @@ void CudaRasterizer::Rasterizer::backward(
 		dL_dsh,
 		(glm::vec3*)dL_dscale,
 		(glm::vec4*)dL_drot,
+		transform2d,
+		regressionState.v11v12,
 		antialiasing), debug);
 }
