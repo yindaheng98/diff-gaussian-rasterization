@@ -23,7 +23,7 @@ A_gt = (np.random.rand(2, 2) - 0.5) * 10
 b_gt = (np.random.rand(2) - 0.5) * 10
 xy = np.random.rand(2, N)
 xy_dot = A_gt @ xy + b_gt[:, None]
-xy_dot += np.random.rand(2, N) * 0.1
+# xy_dot += np.random.rand(2, N) * 0.1
 
 x = xy[0, :]
 y = xy[1, :]
@@ -146,7 +146,7 @@ def manual_least_square_incremental(x, y, x_, y_, w):
     return xA, xb, yA, yb
 
 
-weights = np.random.rand(N)
+weights = np.ones(N)  # np.random.rand(N)
 
 Ax_pred, bx_pred, Ay_pred, by_pred = manual_least_square_incremental(x, y, x_dot, y_dot, weights)
 
