@@ -414,7 +414,9 @@ __global__ void preprocessCUDA(
 	float* dL_dsh,
 	glm::vec3* dL_dscale,
 	glm::vec4* dL_drot,
-	float* dL_dopacity)
+	float* dL_dopacity,
+	float* transform2d,
+	float* v11v12)
 {
 	auto idx = cg::this_grid().thread_rank();
 	if (idx >= P || !(radii[idx] > 0))
@@ -693,6 +695,8 @@ void BACKWARD::preprocess(
 	float* dL_dsh,
 	glm::vec3* dL_dscale,
 	glm::vec4* dL_drot,
+	float* transform2d,
+	float* v11v12,
 	bool antialiasing)
 {
 	// Propagate gradients for the path of 2D conic matrix computation. 
@@ -738,7 +742,9 @@ void BACKWARD::preprocess(
 		dL_dsh,
 		dL_dscale,
 		dL_drot,
-		dL_dopacity);
+		dL_dopacity,
+		transform2d,
+		v11v12);
 }
 
 void BACKWARD::render(
