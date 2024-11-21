@@ -384,7 +384,7 @@ void CudaRasterizer::Rasterizer::backward(
 	float* dL_dsh,
 	float* dL_dscale,
 	float* dL_drot,
-	std::function<char* (size_t)> motionBuffer,
+	std::function<char* (size_t)> regressionBuffer,
 	float* motion_map,
 	float fusion_alpha_threshold,
 	float* transform2d,
