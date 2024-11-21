@@ -38,7 +38,10 @@ namespace BACKWARD
 		float4* dL_dconic2D,
 		float* dL_dopacity,
 		float* dL_dcolors,
-		float* dL_dinvdepths);
+		float* dL_dinvdepths,
+		const float2* motion_map,
+		float fusion_alpha_threshold,
+		float* v11v12);
 
 	void preprocess(
 		int P, int D, int M,
