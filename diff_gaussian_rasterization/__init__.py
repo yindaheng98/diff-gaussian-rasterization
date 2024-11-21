@@ -97,6 +97,11 @@ class _RasterizeGaussians(torch.autograd.Function):
         raster_settings = ctx.raster_settings
         colors_precomp, means3D, scales, rotations, cov3Ds_precomp, radii, sh, opacities, geomBuffer, binningBuffer, imgBuffer = ctx.saved_tensors
 
+        x = torch.arange(grad_out_color.shape[1], dtype=torch.float, device=grad_out_color.device)
+        y = torch.arange(grad_out_color.shape[2], dtype=torch.float, device=grad_out_color.device)
+        xy = torch.stack(torch.meshgrid(x, y, indexing='ij'), dim=-1)
+        # xy = torch.zeros((*grad_out_color.shape[1:], 2), dtype=torch.float, device=grad_out_color.device)
+
         # Restructure args as C++ method expects them
         args = (raster_settings.bg,
                 means3D, 
@@ -121,7 +126,7 @@ class _RasterizeGaussians(torch.autograd.Function):
                 binningBuffer,
                 imgBuffer,
                 0.0,
-                torch.zeros((*grad_out_color.shape[1:], 2), dtype=torch.float, device=grad_out_color.device),
+                xy,
                 raster_settings.antialiasing,
                 raster_settings.debug)
 
