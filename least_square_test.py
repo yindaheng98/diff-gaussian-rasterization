@@ -16,6 +16,7 @@ def least_square_np(x, y, x_dot, y_dot):
     kb = np.vstack([kb_x, kb_y])
     return kb[:, :2], kb[:, 2]
 
+
 N = 500
 
 A_gt = (np.random.rand(2, 2) - 0.5) * 10
@@ -43,4 +44,24 @@ xy_id_pred = A_pred @ np.identity(2) + b_pred[:, None]
 plt.plot([b_pred[0], xy_id_pred[0, 0]], [b_pred[1], xy_id_pred[1, 0]], color='red')
 plt.plot([b_pred[0], xy_id_pred[0, 1]], [b_pred[1], xy_id_pred[1, 1]], color='red')
 
+
+def least_square(x, y, x_dot):
+    """
+    least square fitting for a set of points
+    x,y: coordinates of the points before transformation
+    x_dot,y_dot: coordinates of the points after transformation
+    return: A, b: transformation matrix
+    """
+    # least square fitting
+    X = np.vstack([np.ones(len(x)), x, y]).T
+    Y = x_dot[:, None]
+    V11 = X.T @ X
+    V12 = X.T @ Y
+    B = np.linalg.inv(V11) @ V12
+    b, A = B[:, 0][0], B[:, 0][1:]
+    return A.T, b
+
+Ax_pred, bx_pred = least_square(x, y, x_dot)
+Ay_pred, by_pred = least_square(x, y, y_dot)
+A_pred, b_pred = np.array([Ax_pred, Ay_pred]), np.array([bx_pred, by_pred])
 plt.show()
