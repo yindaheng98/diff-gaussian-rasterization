@@ -17,7 +17,7 @@ def least_square_np(x, y, x_dot, y_dot):
     return kb[:, :2], kb[:, 2]
 
 
-N = 500
+N = 1000
 
 A_gt = (np.random.rand(2, 2) - 0.5) * 10
 b_gt = (np.random.rand(2) - 0.5) * 10
