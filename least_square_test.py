@@ -86,7 +86,7 @@ Ay_pred, by_pred = least_square_incremental(x, y, y_dot)
 A_pred, b_pred = np.array([Ax_pred, Ay_pred]), np.array([bx_pred, by_pred])
 
 
-def manual_least_square_incremental_step(x, y, x_, y_, xyv11, xv12, yv12):
+def manual_least_square_incremental_step(x, y, x_, y_, xyv11, x_v12, y_v12):
     # least square fitting
     x2 = x * x
     y2 = y * y
@@ -94,37 +94,55 @@ def manual_least_square_incremental_step(x, y, x_, y_, xyv11, xv12, yv12):
     xyv11[0] += 1
     xyv11[1] += x
     xyv11[2] += y
-    xyv11[3] += x
-    xyv11[4] += x2
-    xyv11[5] += xy
-    xyv11[6] += y
-    xyv11[7] += xy
-    xyv11[8] += y2
-    
-    xv12[0] += x_
-    xv12[1] += x_ * x
-    xv12[2] += x_ * y
-    
-    yv12[0] += y_
-    yv12[1] += y_ * x
-    yv12[2] += y_ * y
-    
-    return xyv11, xv12, yv12
+    xyv11[3] += x2
+    xyv11[4] += xy
+    xyv11[5] += y2
+
+    x_v12[0] += x_
+    x_v12[1] += x_ * x
+    x_v12[2] += x_ * y
+
+    y_v12[0] += y_
+    y_v12[1] += y_ * x
+    y_v12[2] += y_ * y
+
+    return xyv11, x_v12, y_v12
+
 
 def manual_least_square_incremental(x, y, x_, y_):
-    xyv11 = [0] * 9
-    xv12 = [0] * 3
-    yv12 = [0] * 3
+    xyv11 = [0] * 6
+    x_v12 = [0] * 3
+    y_v12 = [0] * 3
     for sample in zip(x, y, x_, y_):
-        xyv11, xv12, yv12 = manual_least_square_incremental_step(*sample, xyv11, xv12, yv12)
-    xyv11 = np.array(xyv11).reshape(3, 3)
-    xv12 = np.array(xv12).reshape(3, 1)
-    yv12 = np.array(yv12).reshape(3, 1)
-    xB = np.linalg.inv(xyv11) @ xv12
-    yB = np.linalg.inv(xyv11) @ yv12
-    xb, xA = xB[:, 0][0], xB[:, 0][1:]
-    yb, yA = yB[:, 0][0], yB[:, 0][1:]
-    return xA.T, xb, yA.T, yb
+        xyv11, x_v12, y_v12 = manual_least_square_incremental_step(*sample, xyv11, x_v12, y_v12)
+
+    v11 = xyv11
+    m11, m12, m13 = v11[0], v11[1], v11[2]
+    m22, m23 = v11[3], v11[4]
+    m33 = v11[5]
+    a11 = m33*m22-m23*m23
+    a12 = m13*m23-m33*m12
+    a13 = m12*m23-m13*m22
+    a22 = m33*m11-m13*m13
+    a23 = m12*m13-m11*m23
+    a33 = m11*m22-m12*m12
+
+    det = m11*a11+m12*a12+m13*a13
+
+    xB, yB = [0] * 3, [0] * 3
+
+    xB[0] = (a11*x_v12[0]+a12*x_v12[1]+a13*x_v12[2]) / det
+    xB[1] = (a12*x_v12[0]+a22*x_v12[1]+a23*x_v12[2]) / det
+    xB[2] = (a13*x_v12[0]+a23*x_v12[1]+a33*x_v12[2]) / det
+
+    yB[0] = (a11*y_v12[0]+a12*y_v12[1]+a13*y_v12[2]) / det
+    yB[1] = (a12*y_v12[0]+a22*y_v12[1]+a23*y_v12[2]) / det
+    yB[2] = (a13*y_v12[0]+a23*y_v12[1]+a33*y_v12[2]) / det
+
+    xb, xA = xB[0], xB[1:]
+    yb, yA = yB[0], yB[1:]
+    return xA, xb, yA, yb
+
 
 Ax_pred, bx_pred, Ay_pred, by_pred = manual_least_square_incremental(x, y, x_dot, y_dot)
 

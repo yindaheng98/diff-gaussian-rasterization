@@ -448,6 +448,39 @@ __global__ void preprocessCUDA(
 	// Compute gradient updates due to computing covariance from scale/rotation
 	if (scales)
 		computeCov3D(idx, scales[idx], scale_modifier, rotations[idx], dL_dcov3D, dL_dscale, dL_drot);
+
+	float* v_offset = v11v12 + idx * (6 + 3 + 3);
+	// Compute inv(v11) for weighted regression
+	float* v11 = v_offset;
+	float m11 = v11[0]; float m12 = v11[1]; float m13 = v11[2];
+	float m22 = v11[3]; float m23 = v11[4];
+	float m33 = v11[5];
+	v_offset += 6;
+	// Compute adjugate
+	float a11 = m33*m22-m23*m23; float a12 = m13*m23-m33*m12; float a13 = m12*m23-m13*m22;
+	float a22 = m33*m11-m13*m13; float a23 = m12*m13-m11*m23;
+	float a33 = m11*m22-m12*m12;
+	// Compute determinant
+	float det = m11*a11+m12*a12+m13*a13;
+
+	float* t_offset = transform2d + idx * 6;
+	// Compute inv(v11)*v12 for X axis weighted regression
+	float* x_v12 = v_offset;
+	float* xB = t_offset;
+	xB[0] = (a11*x_v12[0]+a12*x_v12[1]+a13*x_v12[2]) / det;
+	xB[1] = (a12*x_v12[0]+a22*x_v12[1]+a23*x_v12[2]) / det;
+	xB[2] = (a13*x_v12[0]+a23*x_v12[1]+a33*x_v12[2]) / det;
+	v_offset += 3;
+	t_offset += 3;
+	// Compute inv(v11)*v12 for Y axis weighted regression
+	float* y_v12 = v_offset;
+	float* yB = t_offset;
+	yB[0] = (a11*y_v12[0]+a12*y_v12[1]+a13*y_v12[2]) / det;
+	yB[1] = (a12*y_v12[0]+a22*y_v12[1]+a23*y_v12[2]) / det;
+	yB[2] = (a13*y_v12[0]+a23*y_v12[1]+a33*y_v12[2]) / det;
+	v_offset += 3;
+	t_offset += 3;
+	// TODO: dealing with det == 0
 }
 
 // Backward version of the rendering procedure.
