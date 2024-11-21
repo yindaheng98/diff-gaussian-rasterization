@@ -193,6 +193,13 @@ CudaRasterizer::BinningState CudaRasterizer::BinningState::fromChunk(char*& chun
 	return binning;
 }
 
+CudaRasterizer::RegressionState CudaRasterizer::RegressionState::fromChunk(char*& chunk, size_t P)
+{
+	RegressionState regression;
+	obtain(chunk, regression.v11v12, P * 18, 128);
+	return regression;
+}
+
 // Forward rendering procedure for differentiable rasterization
 // of Gaussians.
 int CudaRasterizer::Rasterizer::forward(
@@ -385,6 +392,10 @@ void CudaRasterizer::Rasterizer::backward(
 	BinningState binningState = BinningState::fromChunk(binning_buffer, R);
 	ImageState imgState = ImageState::fromChunk(img_buffer, width * height);
 
+	size_t regression_chunk_size = required<RegressionState>(P);
+	char* regression_chunkptr = regressionBuffer(regression_chunk_size);
+	RegressionState regressionState = RegressionState::fromChunk(regression_chunkptr, P);
+
 	if (radii == nullptr)
 	{
 		radii = geomState.internal_radii;
@@ -419,7 +430,10 @@ void CudaRasterizer::Rasterizer::backward(
 		(float4*)dL_dconic,
 		dL_dopacity,
 		dL_dcolor,
-		dL_dinvdepth), debug);
+		dL_dinvdepth,
+		(float2*)motion_map,
+		fusion_alpha_threshold,
+		regressionState.v11v12), debug);
 
 	// Take care of the rest of preprocessing. Was the precomputed covariance
 	// given to us or a scales/rot pair? If precomputed, pass that. If not,

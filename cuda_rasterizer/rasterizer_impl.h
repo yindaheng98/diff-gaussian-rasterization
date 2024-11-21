@@ -64,6 +64,13 @@ namespace CudaRasterizer
 		static BinningState fromChunk(char*& chunk, size_t P);
 	};
 
+	struct RegressionState
+	{
+		float* v11v12;
+
+		static RegressionState fromChunk(char*& chunk, size_t P);
+	};
+
 	template<typename T> 
 	size_t required(size_t P)
 	{

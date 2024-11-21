@@ -468,7 +468,10 @@ renderCUDA(
 	float4* __restrict__ dL_dconic2D,
 	float* __restrict__ dL_dopacity,
 	float* __restrict__ dL_dcolors,
-	float* __restrict__ dL_dinvdepths
+	float* __restrict__ dL_dinvdepths,
+	const float2* __restrict__ motion_map,
+	float fusion_alpha_threshold,
+	float* __restrict__ v11v12
 )
 {
 	// We rasterize again. Compute necessary block info.
@@ -729,7 +732,10 @@ void BACKWARD::render(
 	float4* dL_dconic2D,
 	float* dL_dopacity,
 	float* dL_dcolors,
-	float* dL_dinvdepths)
+	float* dL_dinvdepths,
+	const float2* motion_map,
+	float fusion_alpha_threshold,
+	float* v11v12)
 {
 	renderCUDA<NUM_CHANNELS> << <grid, block >> >(
 		ranges,
@@ -748,6 +754,9 @@ void BACKWARD::render(
 		dL_dconic2D,
 		dL_dopacity,
 		dL_dcolors,
-		dL_dinvdepths
+		dL_dinvdepths,
+		motion_map,
+		fusion_alpha_threshold,
+		v11v12
 		);
 }
