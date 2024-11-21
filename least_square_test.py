@@ -46,12 +46,6 @@ plt.plot([b_pred[0], xy_id_pred[0, 1]], [b_pred[1], xy_id_pred[1, 1]], color='re
 
 
 def least_square(x, y, x_dot):
-    """
-    least square fitting for a set of points
-    x,y: coordinates of the points before transformation
-    x_dot,y_dot: coordinates of the points after transformation
-    return: A, b: transformation matrix
-    """
     # least square fitting
     X = np.vstack([np.ones(len(x)), x, y]).T
     Y = x_dot[:, None]
@@ -59,9 +53,36 @@ def least_square(x, y, x_dot):
     V12 = X.T @ Y
     B = np.linalg.inv(V11) @ V12
     b, A = B[:, 0][0], B[:, 0][1:]
+    return A.T, b, V11, V12
+
+
+Ax_pred, bx_pred, _, _ = least_square(x, y, x_dot)
+Ay_pred, by_pred, _, _ = least_square(x, y, y_dot)
+A_pred, b_pred = np.array([Ax_pred, Ay_pred]), np.array([bx_pred, by_pred])
+
+
+def least_square_incremental_step(x, y, x_dot, V11, V12):
+    # least square fitting
+    X = np.vstack([np.ones(len(x)), x, y]).T
+    Y = x_dot[:, None]
+    V11_this = X.T @ X
+    V12_this = X.T @ Y
+    V11 = V11_this if V11 is None else V11 + V11_this
+    V12 = V12_this if V12 is None else V12 + V12_this
+    return V11, V12
+
+
+def least_square_incremental(x, y, x_dot):
+    _, _, V11, V12 = least_square(x[:3], y[:3], x_dot[:3])
+    for sample in zip(x[3:], y[3:], x_dot[3:]):
+        V11, V12 = least_square_incremental_step(*[np.array([s]) for s in sample], V11, V12)
+    B = np.linalg.inv(V11) @ V12
+    b, A = B[:, 0][0], B[:, 0][1:]
     return A.T, b
 
-Ax_pred, bx_pred = least_square(x, y, x_dot)
-Ay_pred, by_pred = least_square(x, y, y_dot)
+
+Ax_pred, bx_pred = least_square_incremental(x, y, x_dot)
+Ay_pred, by_pred = least_square_incremental(x, y, y_dot)
 A_pred, b_pred = np.array([Ax_pred, Ay_pred]), np.array([bx_pred, by_pred])
+
 plt.show()
