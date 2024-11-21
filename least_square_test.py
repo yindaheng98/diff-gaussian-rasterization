@@ -85,4 +85,47 @@ Ax_pred, bx_pred = least_square_incremental(x, y, x_dot)
 Ay_pred, by_pred = least_square_incremental(x, y, y_dot)
 A_pred, b_pred = np.array([Ax_pred, Ay_pred]), np.array([bx_pred, by_pred])
 
+
+def manual_least_square_incremental_step(x, y, x_, y_, xyv11, xv12, yv12):
+    # least square fitting
+    x2 = x * x
+    y2 = y * y
+    xy = x * y
+    xyv11[0] += 1
+    xyv11[1] += x
+    xyv11[2] += y
+    xyv11[3] += x
+    xyv11[4] += x2
+    xyv11[5] += xy
+    xyv11[6] += y
+    xyv11[7] += xy
+    xyv11[8] += y2
+    
+    xv12[0] += x_
+    xv12[1] += x_ * x
+    xv12[2] += x_ * y
+    
+    yv12[0] += y_
+    yv12[1] += y_ * x
+    yv12[2] += y_ * y
+    
+    return xyv11, xv12, yv12
+
+def manual_least_square_incremental(x, y, x_, y_):
+    xyv11 = [0] * 9
+    xv12 = [0] * 3
+    yv12 = [0] * 3
+    for sample in zip(x, y, x_, y_):
+        xyv11, xv12, yv12 = manual_least_square_incremental_step(*sample, xyv11, xv12, yv12)
+    xyv11 = np.array(xyv11).reshape(3, 3)
+    xv12 = np.array(xv12).reshape(3, 1)
+    yv12 = np.array(yv12).reshape(3, 1)
+    xB = np.linalg.inv(xyv11) @ xv12
+    yB = np.linalg.inv(xyv11) @ yv12
+    xb, xA = xB[:, 0][0], xB[:, 0][1:]
+    yb, yA = yB[:, 0][0], yB[:, 0][1:]
+    return xA.T, xb, yA.T, yb
+
+Ax_pred, bx_pred, Ay_pred, by_pred = manual_least_square_incremental(x, y, x_dot, y_dot)
+
 plt.show()
