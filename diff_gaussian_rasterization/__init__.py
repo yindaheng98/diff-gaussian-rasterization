@@ -105,6 +105,14 @@ class _RasterizeGaussians(torch.autograd.Function):
         x = torch.arange(grad_out_color.shape[1], dtype=torch.float, device=grad_out_color.device)
         y = torch.arange(grad_out_color.shape[2], dtype=torch.float, device=grad_out_color.device)
         xy = torch.stack(torch.meshgrid(x, y, indexing='ij'), dim=-1)
+        A = torch.rand((2, 2)).to(grad_out_color.device) - 0.5
+        b = (torch.rand(2).to(grad_out_color.device) - 0.5) * grad_out_color.shape[1]
+        solution_gt = torch.cat([b[:, None], A], dim=1).T
+        xy_transformed = (xy.view(-1, 2) @ A.T + b).view(xy.shape)
+        X = torch.cat([torch.ones((xy.view(-1, 2).shape[0], 1)).to(device=xy.device), xy.view(-1, 2)], dim=1)
+        Y = xy_transformed.view(-1, 2)
+        solution = torch.linalg.lstsq(X, Y).solution
+        diff = solution - solution_gt
         # xy = torch.zeros((*grad_out_color.shape[1:], 2), dtype=torch.float, device=grad_out_color.device)
 
         # Restructure args as C++ method expects them
