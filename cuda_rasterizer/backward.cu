@@ -636,6 +636,33 @@ renderCUDA(
 
 			// Update gradients w.r.t. opacity of the Gaussian
 			atomicAdd(&(dL_dopacity[global_id]), G * dL_dalpha);
+
+			// Update v11 matrix for both X and Y axis weighted regression
+			float* xyv11 = v11v12 + global_id * (9 + 3 + 3);
+			// v11 = SUM([
+			//   [1,   x,   y],
+			//   [x, x^2,  xy],
+			//   [y,  xy, y^2]
+			// ] * weight)
+			float w = alpha * T;
+			float x = w * pix.x; float x2 = x * pix.x;
+			float y = w * pix.y; float y2 = y * pix.y;
+			float _xy = w * pix.x * pix.y;
+			atomicAdd(&(xyv11[0]), w); atomicAdd(&(xyv11[1]),   x); atomicAdd(&(xyv11[2]),   y);
+			atomicAdd(&(xyv11[3]), x); atomicAdd(&(xyv11[4]),  x2); atomicAdd(&(xyv11[5]), _xy);
+			atomicAdd(&(xyv11[6]), y); atomicAdd(&(xyv11[7]), _xy); atomicAdd(&(xyv11[8]),  y2);
+
+			// Update v12 matrix for both X axis weighted regression
+			float* x_v12 = v11v12 + global_id * (9 + 3 + 3) + 9;
+			// X axis v12 = SUM([1, x, y] * x' * weight)
+			float x_ = motion_map[pix_id].x;
+			atomicAdd(&(x_v12[0]), x_ * w); atomicAdd(&(x_v12[1]),  x_ * x); atomicAdd(&(x_v12[2]),  x_ * y);
+
+			// Update v12 matrix for both Y axis weighted regression
+			float* y_v12 = v11v12 + global_id * (9 + 3 + 3) + 9 + 3;
+			// Y axis v12 = SUM([1, x, y] * y' * weight)
+			float y_ = motion_map[pix_id].y;
+			atomicAdd(&(y_v12[0]), y_ * w); atomicAdd(&(y_v12[1]),  y_ * x); atomicAdd(&(y_v12[2]),  y_ * y);
 		}
 	}
 }

@@ -196,7 +196,7 @@ CudaRasterizer::BinningState CudaRasterizer::BinningState::fromChunk(char*& chun
 CudaRasterizer::RegressionState CudaRasterizer::RegressionState::fromChunk(char*& chunk, size_t P)
 {
 	RegressionState regression;
-	obtain(chunk, regression.v11v12, P * 18, 128);
+	obtain(chunk, regression.v11v12, P * (9 + 3 + 3), 128);
 	return regression;
 }
 
