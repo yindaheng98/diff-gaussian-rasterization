@@ -452,16 +452,16 @@ __global__ void preprocessCUDA(
 	float* v_offset = v11v12 + idx * (6 + 3 + 3);
 	// Compute inv(v11) for weighted regression
 	float* v11 = v_offset;
-	float m11 = v11[0]; float m12 = v11[1]; float m13 = v11[2];
-	float m22 = v11[3]; float m23 = v11[4];
-	float m33 = v11[5];
+	double m11 = v11[0]; double m12 = v11[1]; double m13 = v11[2];
+	double m22 = v11[3]; double m23 = v11[4];
+	double m33 = v11[5];
 	v_offset += 6;
 	// Compute adjugate
-	float a11 = m33*m22-m23*m23; float a12 = m13*m23-m33*m12; float a13 = m12*m23-m13*m22;
-	float a22 = m33*m11-m13*m13; float a23 = m12*m13-m11*m23;
-	float a33 = m11*m22-m12*m12;
+	double a11 = m33*m22-m23*m23; double a12 = m13*m23-m33*m12; double a13 = m12*m23-m13*m22;
+	double a22 = m33*m11-m13*m13; double a23 = m12*m13-m11*m23;
+	double a33 = m11*m22-m12*m12;
 	// Compute determinant
-	float det = m11*a11+m12*a12+m13*a13;
+	double det = m11*a11+m12*a12+m13*a13;
 
 	float2* B = (float2*)(transform2d + idx * 6);
 	if (det < 1e-5) {
