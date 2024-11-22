@@ -134,7 +134,7 @@ class _RasterizeGaussians(torch.autograd.Function):
                 binningBuffer,
                 imgBuffer,
                 0.0,
-                xy,
+                xy_transformed,
                 raster_settings.antialiasing,
                 raster_settings.debug)
 
