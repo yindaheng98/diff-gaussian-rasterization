@@ -395,6 +395,8 @@ void CudaRasterizer::Rasterizer::backward(
 	float* motion_map,
 	float fusion_alpha_threshold,
 	float* transform2d,
+	float* tran_alpha,
+	float* tran_det,
 	bool antialiasing,
 	bool debug)
 {
@@ -475,6 +477,8 @@ void CudaRasterizer::Rasterizer::backward(
 		(glm::vec3*)dL_dscale,
 		(glm::vec4*)dL_drot,
 		transform2d,
+		tran_alpha,
+		tran_det,
 		regressionState.v11v12,
 		antialiasing), debug);
 }

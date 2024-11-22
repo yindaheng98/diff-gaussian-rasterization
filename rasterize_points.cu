@@ -137,7 +137,7 @@ RasterizeGaussiansCUDA(
   return std::make_tuple(rendered, out_color, radii, geomBuffer, binningBuffer, imgBuffer, out_invdepth, out_feature, out_feature_alpha);
 }
 
-std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
  RasterizeGaussiansBackwardCUDA(
  	const torch::Tensor& background,
 	const torch::Tensor& means3D,
@@ -191,6 +191,8 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
   torch::Tensor dL_drotations = torch::zeros({P, 4}, means3D.options());
   torch::Tensor dL_dinvdepths = torch::zeros({0, 1}, means3D.options());
   torch::Tensor transform2d = torch::zeros({P, 3, 2}, means3D.options());
+  torch::Tensor tran_alpha = torch::zeros({P}, means3D.options());
+  torch::Tensor tran_det = torch::zeros({P}, means3D.options());
   
   float* dL_dinvdepthsptr = nullptr;
   float* dL_dout_invdepthptr = nullptr;
@@ -245,11 +247,13 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
 	  motion_map.contiguous().data<float>(),
 	  fusion_alpha_threshold,
 	  transform2d.contiguous().data<float>(),
+	  tran_alpha.contiguous().data<float>(),
+	  tran_det.contiguous().data<float>(),
 	  antialiasing,
 	  debug);
   }
 
-  return std::make_tuple(dL_dmeans2D, dL_dcolors, dL_dopacity, dL_dmeans3D, dL_dcov3D, dL_dsh, dL_dscales, dL_drotations, transform2d, regressionBuffer);
+  return std::make_tuple(dL_dmeans2D, dL_dcolors, dL_dopacity, dL_dmeans3D, dL_dcov3D, dL_dsh, dL_dscales, dL_drotations, transform2d, tran_alpha, tran_det, regressionBuffer);
 }
 
 torch::Tensor markVisible(
