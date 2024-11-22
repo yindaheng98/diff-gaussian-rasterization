@@ -91,10 +91,14 @@ print(A_gt - A_pred, b_gt - b_pred)
 def manual_least_square_incremental_step(px, py, x_, y_, w, xyv11, x_v12, y_v12):
     # least square fitting
     x = w * px
-    x2 = x * x
+    x2 = x * px
     y = w * py
-    y2 = y * y
+    y2 = y * py
     xy = w * px * py
+    
+    V11 = np.array([[xyv11[0], xyv11[1], xyv11[2]], [xyv11[1], xyv11[3], xyv11[4]], [xyv11[2], xyv11[4], xyv11[5]]])
+    V11_this = np.array([[1, px, py], [px, px*px, px*py], [py, px*py, py*py]])
+    V11_new = V11 + V11_this * w
     xyv11[0] += w
     xyv11[1] += x
     xyv11[2] += y
@@ -102,6 +106,9 @@ def manual_least_square_incremental_step(px, py, x_, y_, w, xyv11, x_v12, y_v12)
     xyv11[4] += xy
     xyv11[5] += y2
 
+    V12 = np.array([[x_v12[0], y_v12[0]], [x_v12[1],y_v12[1]], [x_v12[2], y_v12[2]]])
+    V12_this = np.array([[x_, y_], [px * x_, px * y_], [py * x_, py * y_]])
+    V12_new = V12 + V12_this * w
     x_v12[0] += x_ * w
     x_v12[1] += x_ * x
     x_v12[2] += x_ * y
@@ -120,6 +127,9 @@ def manual_least_square_incremental(x, y, x_, y_, w):
     for sample in zip(x, y, x_, y_, w):
         xyv11, x_v12, y_v12 = manual_least_square_incremental_step(*sample, xyv11, x_v12, y_v12)
 
+    V11 = np.array([[xyv11[0], xyv11[1], xyv11[2]], [xyv11[1], xyv11[3], xyv11[4]], [xyv11[2], xyv11[4], xyv11[5]]])
+    V12 = np.array([[x_v12[0], y_v12[0]], [x_v12[1],y_v12[1]], [x_v12[2], y_v12[2]]])
+    B = np.linalg.inv(V11) @ V12
     v11 = xyv11
     m11, m12, m13 = v11[0], v11[1], v11[2]
     m22, m23 = v11[3], v11[4]
