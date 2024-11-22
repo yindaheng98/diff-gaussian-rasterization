@@ -61,29 +61,31 @@ Ay_pred, by_pred, _, _ = least_square(x, y, y_dot)
 A_pred, b_pred = np.array([Ax_pred, Ay_pred]), np.array([bx_pred, by_pred])
 
 
-def least_square_incremental_step(x, y, x_dot, V11, V12):
+def least_square_incremental_step(x, y, x_dot, w, V11, V12):
     # least square fitting
     X = np.vstack([np.ones(len(x)), x, y]).T
     Y = x_dot[:, None]
     V11_this = X.T @ X
     V12_this = X.T @ Y
-    V11 += V11_this
-    V12 += V12_this
+    V11 += V11_this * w
+    V12 += V12_this * w
     return V11, V12
 
 
-def least_square_incremental(x, y, x_dot):
+def least_square_incremental(x, y, x_dot, w):
     V11, V12 = np.zeros((3, 3)), np.zeros((3, 1))
-    for sample in zip(x, y, x_dot):
+    for sample in zip(x, y, x_dot, w):
         V11, V12 = least_square_incremental_step(*[np.array([s]) for s in sample], V11, V12)
     B = np.linalg.inv(V11) @ V12
     b, A = B[:, 0][0], B[:, 0][1:]
     return A.T, b
 
 
-Ax_pred, bx_pred = least_square_incremental(x, y, x_dot)
-Ay_pred, by_pred = least_square_incremental(x, y, y_dot)
+weights = np.random.rand(N)
+Ax_pred, bx_pred = least_square_incremental(x, y, x_dot, weights)
+Ay_pred, by_pred = least_square_incremental(x, y, y_dot, weights)
 A_pred, b_pred = np.array([Ax_pred, Ay_pred]), np.array([bx_pred, by_pred])
+print(A_gt - A_pred, b_gt - b_pred)
 
 
 def manual_least_square_incremental_step(px, py, x_, y_, w, xyv11, x_v12, y_v12):
@@ -146,8 +148,8 @@ def manual_least_square_incremental(x, y, x_, y_, w):
     return xA, xb, yA, yb
 
 
-weights = np.ones(N)  # np.random.rand(N)
-
 Ax_pred, bx_pred, Ay_pred, by_pred = manual_least_square_incremental(x, y, x_dot, y_dot, weights)
+A_pred, b_pred = np.array([Ax_pred, Ay_pred]), np.array([bx_pred, by_pred])
+print(A_gt - A_pred, b_gt - b_pred)
 
 plt.show()
