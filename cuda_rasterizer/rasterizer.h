@@ -90,6 +90,8 @@ namespace CudaRasterizer
 			float* motion_map,
 			float fusion_alpha_threshold,
 			float* transform2d,
+			float* tran_alpha,
+			float* tran_det,
 			bool antialiasing,
 			bool debug);
 	};

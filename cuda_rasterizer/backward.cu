@@ -416,6 +416,8 @@ __global__ void preprocessCUDA(
 	glm::vec4* dL_drot,
 	float* dL_dopacity,
 	float* transform2d,
+	float* tran_alpha,
+	float* tran_det,
 	float* v11v12)
 {
 	auto idx = cg::this_grid().thread_rank();
@@ -450,6 +452,7 @@ __global__ void preprocessCUDA(
 		computeCov3D(idx, scales[idx], scale_modifier, rotations[idx], dL_dcov3D, dL_dscale, dL_drot);
 
 	float* v_offset = v11v12 + idx * (6 + 3 + 3);
+	tran_alpha[idx] = v_offset[0];
 	// Compute inv(v11) for weighted regression
 	glm::dmat3 v11 = glm::dmat3(
 		v_offset[0], v_offset[1], v_offset[2],
@@ -458,6 +461,7 @@ __global__ void preprocessCUDA(
 	v_offset += 6;
 	// Compute determinant
 	float det = glm::determinant(v11);
+	tran_det[idx] = det;
 	glm::dmat3 inv_v11 = glm::inverse(v11);
 
 	float2* B = (float2*)(transform2d + idx * 6);
@@ -733,6 +737,8 @@ void BACKWARD::preprocess(
 	glm::vec3* dL_dscale,
 	glm::vec4* dL_drot,
 	float* transform2d,
+	float* tran_alpha,
+	float* trans_det,
 	float* v11v12,
 	bool antialiasing)
 {
@@ -781,6 +787,8 @@ void BACKWARD::preprocess(
 		dL_drot,
 		dL_dopacity,
 		transform2d,
+		tran_alpha,
+		trans_det,
 		v11v12);
 }
 

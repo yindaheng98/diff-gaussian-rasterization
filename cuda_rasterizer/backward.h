@@ -70,6 +70,8 @@ namespace BACKWARD
 		glm::vec3* dL_dscale,
 		glm::vec4* dL_drot,
 		float* transform2d,
+		float* tran_alpha,
+		float* tran_det,
 		float* v11v12,
 		bool antialiasing);
 }
