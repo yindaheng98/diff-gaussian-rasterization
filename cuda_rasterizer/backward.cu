@@ -451,17 +451,14 @@ __global__ void preprocessCUDA(
 
 	float* v_offset = v11v12 + idx * (6 + 3 + 3);
 	// Compute inv(v11) for weighted regression
-	float* v11 = v_offset;
-	double m11 = v11[0]; double m12 = v11[1]; double m13 = v11[2];
-	double m22 = v11[3]; double m23 = v11[4];
-	double m33 = v11[5];
+	glm::dmat3 v11 = glm::dmat3(
+		v_offset[0], v_offset[1], v_offset[2],
+		v_offset[1], v_offset[3], v_offset[4],
+		v_offset[2], v_offset[4], v_offset[5]);
 	v_offset += 6;
-	// Compute adjugate
-	double a11 = m33*m22-m23*m23; double a12 = m13*m23-m33*m12; double a13 = m12*m23-m13*m22;
-	double a22 = m33*m11-m13*m13; double a23 = m12*m13-m11*m23;
-	double a33 = m11*m22-m12*m12;
 	// Compute determinant
-	double det = m11*a11+m12*a12+m13*a13;
+	float det = glm::determinant(v11);
+	glm::dmat3 inv_v11 = glm::inverse(v11);
 
 	float2* B = (float2*)(transform2d + idx * 6);
 	if (det < 1e-5) {
@@ -471,15 +468,17 @@ __global__ void preprocessCUDA(
 	}
 	// Compute inv(v11)*v12 for X axis weighted regression
 	float* x_v12 = v_offset;
-	B[0].x = (a11*x_v12[0]+a12*x_v12[1]+a13*x_v12[2]) / det;
-	B[1].x = (a12*x_v12[0]+a22*x_v12[1]+a23*x_v12[2]) / det;
-	B[2].x = (a13*x_v12[0]+a23*x_v12[1]+a33*x_v12[2]) / det;
+	glm::dvec3 Bx = inv_v11 * glm::dvec3(x_v12[0], x_v12[1], x_v12[2]);
+	B[0].x = Bx.x;
+	B[1].x = Bx.y;
+	B[2].x = Bx.z;
 	v_offset += 3;
 	// Compute inv(v11)*v12 for Y axis weighted regression
 	float* y_v12 = v_offset;
-	B[0].y = (a11*y_v12[0]+a12*y_v12[1]+a13*y_v12[2]) / det;
-	B[1].y = (a12*y_v12[0]+a22*y_v12[1]+a23*y_v12[2]) / det;
-	B[2].y = (a13*y_v12[0]+a23*y_v12[1]+a33*y_v12[2]) / det;
+	glm::dvec3 By = inv_v11 * glm::dvec3(y_v12[0], y_v12[1], y_v12[2]);
+	B[0].y = By.x;
+	B[1].y = By.y;
+	B[2].y = By.z;
 	v_offset += 3;
 }
 
