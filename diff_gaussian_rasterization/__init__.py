@@ -102,9 +102,9 @@ class _RasterizeGaussians(torch.autograd.Function):
         raster_settings = ctx.raster_settings
         colors_precomp, means3D, scales, rotations, cov3Ds_precomp, radii, sh, opacities, geomBuffer, binningBuffer, imgBuffer = ctx.saved_tensors
 
-        x = torch.arange(grad_out_color.shape[1], dtype=torch.float, device=grad_out_color.device)
-        y = torch.arange(grad_out_color.shape[2], dtype=torch.float, device=grad_out_color.device)
-        xy = torch.stack(torch.meshgrid(x, y, indexing='ij'), dim=-1)
+        x = torch.arange(grad_out_color.shape[2], dtype=torch.float, device=grad_out_color.device)
+        y = torch.arange(grad_out_color.shape[1], dtype=torch.float, device=grad_out_color.device)
+        xy = torch.stack(torch.meshgrid(x, y, indexing='xy'), dim=-1)
         A = torch.rand((2, 2)).to(grad_out_color.device) - 0.5
         b = (torch.rand(2).to(grad_out_color.device) - 0.5) * grad_out_color.shape[1]
         solution_gt = torch.cat([b[:, None], A], dim=1).T
