@@ -463,25 +463,23 @@ __global__ void preprocessCUDA(
 	// Compute determinant
 	float det = m11*a11+m12*a12+m13*a13;
 
-	float* t_offset = transform2d + idx * 6;
-	float* xB = t_offset; t_offset += 3;
-	float* yB = t_offset; t_offset += 3;
+	float2* B = (float2*)(transform2d + idx * 6);
 	if (det < 1e-5) {
-		xB[0] = 0; xB[1] = 1; xB[2] = 0;
-		yB[0] = 0; yB[1] = 0; yB[2] = 1;
+		B[0].x = 0; B[1].x = 1; B[2].x = 0;
+		B[0].y = 0; B[1].y = 0; B[2].y = 1;
 		return;
 	}
 	// Compute inv(v11)*v12 for X axis weighted regression
 	float* x_v12 = v_offset;
-	xB[0] = (a11*x_v12[0]+a12*x_v12[1]+a13*x_v12[2]) / det;
-	xB[1] = (a12*x_v12[0]+a22*x_v12[1]+a23*x_v12[2]) / det;
-	xB[2] = (a13*x_v12[0]+a23*x_v12[1]+a33*x_v12[2]) / det;
+	B[0].x = (a11*x_v12[0]+a12*x_v12[1]+a13*x_v12[2]) / det;
+	B[1].x = (a12*x_v12[0]+a22*x_v12[1]+a23*x_v12[2]) / det;
+	B[2].x = (a13*x_v12[0]+a23*x_v12[1]+a33*x_v12[2]) / det;
 	v_offset += 3;
 	// Compute inv(v11)*v12 for Y axis weighted regression
 	float* y_v12 = v_offset;
-	yB[0] = (a11*y_v12[0]+a12*y_v12[1]+a13*y_v12[2]) / det;
-	yB[1] = (a12*y_v12[0]+a22*y_v12[1]+a23*y_v12[2]) / det;
-	yB[2] = (a13*y_v12[0]+a23*y_v12[1]+a33*y_v12[2]) / det;
+	B[0].y = (a11*y_v12[0]+a12*y_v12[1]+a13*y_v12[2]) / det;
+	B[1].y = (a12*y_v12[0]+a22*y_v12[1]+a23*y_v12[2]) / det;
+	B[2].y = (a13*y_v12[0]+a23*y_v12[1]+a33*y_v12[2]) / det;
 	v_offset += 3;
 }
 
