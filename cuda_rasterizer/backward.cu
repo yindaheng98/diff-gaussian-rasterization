@@ -681,9 +681,9 @@ renderCUDA(
 			//   [y,  xy, y^2]
 			// ] * weight)
 			float w = alpha * T;
-			float x = w * pix.x; float x2 = x * pix.x;
-			float y = w * pix.y; float y2 = y * pix.y;
-			float _xy = w * pix.x * pix.y;
+			float x = w * pixf.x; float x2 = x * pixf.x;
+			float y = w * pixf.y; float y2 = y * pixf.y;
+			float _xy = w * pixf.x * pixf.y;
 			// symmetric matrix, so only 6 values
 			atomicAdd(&(xyv11[0]),  w); atomicAdd(&(xyv11[1]),  x); atomicAdd(&(xyv11[2]), y);
 			atomicAdd(&(xyv11[3]), x2); atomicAdd(&(xyv11[4]),_xy);
