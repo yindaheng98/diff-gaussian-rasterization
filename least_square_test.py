@@ -67,14 +67,14 @@ def least_square_incremental_step(x, y, x_dot, V11, V12):
     Y = x_dot[:, None]
     V11_this = X.T @ X
     V12_this = X.T @ Y
-    V11 = V11_this if V11 is None else V11 + V11_this
-    V12 = V12_this if V12 is None else V12 + V12_this
+    V11 += V11_this
+    V12 += V12_this
     return V11, V12
 
 
 def least_square_incremental(x, y, x_dot):
-    _, _, V11, V12 = least_square(x[:3], y[:3], x_dot[:3])
-    for sample in zip(x[3:], y[3:], x_dot[3:]):
+    V11, V12 = np.zeros((3, 3)), np.zeros((3, 1))
+    for sample in zip(x, y, x_dot):
         V11, V12 = least_square_incremental_step(*[np.array([s]) for s in sample], V11, V12)
     B = np.linalg.inv(V11) @ V12
     b, A = B[:, 0][0], B[:, 0][1:]
