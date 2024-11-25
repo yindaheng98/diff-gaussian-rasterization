@@ -157,6 +157,10 @@ __global__ void computeCov2DCUDA(int P,
 	const float* dL_dinvdepth,
 	float3* dL_dmeans,
 	float* dL_dcov,
+	float* transform2d,
+	float* tran_alpha,
+	float* tran_det,
+	float* v11v12,
 	bool antialiasing)
 {
 	auto idx = cg::this_grid().thread_rank();
@@ -323,6 +327,40 @@ __global__ void computeCov2DCUDA(int P,
 	// that is caused because the mean affects the covariance matrix.
 	// Additional mean gradient is accumulated in BACKWARD::preprocess.
 	dL_dmeans[idx] = dL_dmean;
+
+	float* v_offset = v11v12 + idx * (6 + 3 + 3);
+	tran_alpha[idx] = v_offset[0];
+	// Compute inv(v11) for weighted regression
+	glm::dmat3 v11 = glm::dmat3(
+		v_offset[0], v_offset[1], v_offset[2],
+		v_offset[1], v_offset[3], v_offset[4],
+		v_offset[2], v_offset[4], v_offset[5]);
+	v_offset += 6;
+	// Compute determinant
+	float det = glm::determinant(v11);
+	tran_det[idx] = det;
+	glm::dmat3 inv_v11 = glm::inverse(v11);
+
+	float2* B = (float2*)(transform2d + idx * 6);
+	if (det < 1e-5) {
+		B[0].x = 0; B[1].x = 1; B[2].x = 0;
+		B[0].y = 0; B[1].y = 0; B[2].y = 1;
+		return;
+	}
+	// Compute inv(v11)*v12 for X axis weighted regression
+	float* x_v12 = v_offset;
+	glm::dvec3 Bx = inv_v11 * glm::dvec3(x_v12[0], x_v12[1], x_v12[2]);
+	B[0].x = Bx.x;
+	B[1].x = Bx.y;
+	B[2].x = Bx.z;
+	v_offset += 3;
+	// Compute inv(v11)*v12 for Y axis weighted regression
+	float* y_v12 = v_offset;
+	glm::dvec3 By = inv_v11 * glm::dvec3(y_v12[0], y_v12[1], y_v12[2]);
+	B[0].y = By.x;
+	B[1].y = By.y;
+	B[2].y = By.z;
+	v_offset += 3;
 }
 
 // Backward pass for the conversion of scale and rotation to a 
@@ -414,11 +452,7 @@ __global__ void preprocessCUDA(
 	float* dL_dsh,
 	glm::vec3* dL_dscale,
 	glm::vec4* dL_drot,
-	float* dL_dopacity,
-	float* transform2d,
-	float* tran_alpha,
-	float* tran_det,
-	float* v11v12)
+	float* dL_dopacity)
 {
 	auto idx = cg::this_grid().thread_rank();
 	if (idx >= P || !(radii[idx] > 0))
@@ -450,40 +484,6 @@ __global__ void preprocessCUDA(
 	// Compute gradient updates due to computing covariance from scale/rotation
 	if (scales)
 		computeCov3D(idx, scales[idx], scale_modifier, rotations[idx], dL_dcov3D, dL_dscale, dL_drot);
-
-	float* v_offset = v11v12 + idx * (6 + 3 + 3);
-	tran_alpha[idx] = v_offset[0];
-	// Compute inv(v11) for weighted regression
-	glm::dmat3 v11 = glm::dmat3(
-		v_offset[0], v_offset[1], v_offset[2],
-		v_offset[1], v_offset[3], v_offset[4],
-		v_offset[2], v_offset[4], v_offset[5]);
-	v_offset += 6;
-	// Compute determinant
-	float det = glm::determinant(v11);
-	tran_det[idx] = det;
-	glm::dmat3 inv_v11 = glm::inverse(v11);
-
-	float2* B = (float2*)(transform2d + idx * 6);
-	if (det < 1e-5) {
-		B[0].x = 0; B[1].x = 1; B[2].x = 0;
-		B[0].y = 0; B[1].y = 0; B[2].y = 1;
-		return;
-	}
-	// Compute inv(v11)*v12 for X axis weighted regression
-	float* x_v12 = v_offset;
-	glm::dvec3 Bx = inv_v11 * glm::dvec3(x_v12[0], x_v12[1], x_v12[2]);
-	B[0].x = Bx.x;
-	B[1].x = Bx.y;
-	B[2].x = Bx.z;
-	v_offset += 3;
-	// Compute inv(v11)*v12 for Y axis weighted regression
-	float* y_v12 = v_offset;
-	glm::dvec3 By = inv_v11 * glm::dvec3(y_v12[0], y_v12[1], y_v12[2]);
-	B[0].y = By.x;
-	B[1].y = By.y;
-	B[2].y = By.z;
-	v_offset += 3;
 }
 
 // Backward version of the rendering procedure.
@@ -762,6 +762,10 @@ void BACKWARD::preprocess(
 		dL_dinvdepth,
 		(float3*)dL_dmean3D,
 		dL_dcov3D,
+		transform2d,
+		tran_alpha,
+		trans_det,
+		v11v12,
 		antialiasing);
 
 	// Propagate gradients for remaining steps: finish 3D mean gradients,
@@ -785,11 +789,7 @@ void BACKWARD::preprocess(
 		dL_dsh,
 		dL_dscale,
 		dL_drot,
-		dL_dopacity,
-		transform2d,
-		tran_alpha,
-		trans_det,
-		v11v12);
+		dL_dopacity);
 }
 
 void BACKWARD::render(
