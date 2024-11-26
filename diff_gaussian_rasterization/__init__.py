@@ -100,15 +100,6 @@ class _RasterizeGaussians(torch.autograd.Function):
         x = torch.arange(grad_out_color.shape[2], dtype=torch.float, device=grad_out_color.device)
         y = torch.arange(grad_out_color.shape[1], dtype=torch.float, device=grad_out_color.device)
         xy = torch.stack(torch.meshgrid(x, y, indexing='xy'), dim=-1)
-        A = torch.rand((2, 2)).to(grad_out_color.device) - 0.5
-        b = (torch.rand(2).to(grad_out_color.device) - 0.5) * grad_out_color.shape[1]
-        solution_gt = torch.cat([b[:, None], A], dim=1).T
-        xy_transformed = (xy.view(-1, 2) @ A.T + b).view(xy.shape)
-        X = torch.cat([torch.ones((xy.view(-1, 2).shape[0], 1)).to(device=xy.device), xy.view(-1, 2)], dim=1)
-        Y = xy_transformed.view(-1, 2)
-        solution = torch.linalg.lstsq(X, Y).solution
-        diff = solution - solution_gt
-        # xy = torch.zeros((*grad_out_color.shape[1:], 2), dtype=torch.float, device=grad_out_color.device)
 
         # Restructure args as C++ method expects them
         args = (raster_settings.bg,
@@ -134,17 +125,14 @@ class _RasterizeGaussians(torch.autograd.Function):
                 binningBuffer,
                 imgBuffer,
                 0.0,
-                xy_transformed,
+                xy,
                 raster_settings.antialiasing,
                 raster_settings.debug)
 
         # Compute gradients for relevant tensors by invoking backward method
         grad_means2D, grad_colors_precomp, grad_opacities, grad_means3D, grad_cov3Ds_precomp, grad_sh, grad_scales, grad_rotations, transform2d, tran_alpha, tran_det, regressionBuffer = _C.pixel_motion_fusion(*args)        
-        solution_pred = transform2d[..., 0:6].reshape(-1, 2, 3)
-        A = transform2d[..., 6:].reshape(-1, 3, 7)
 
         grads = (
-            None,
             grad_means3D,
             grad_means2D,
             grad_sh,
