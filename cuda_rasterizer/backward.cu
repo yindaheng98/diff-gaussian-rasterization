@@ -339,28 +339,24 @@ __global__ void computeCov2DCUDA(int P,
 	// Compute determinant
 	float det = glm::determinant(v11);
 	tran_det[idx] = det;
-	glm::dmat3 inv_v11 = glm::inverse(v11);
 
-	float2* B = (float2*)(transform2d + idx * 6);
+	float* out_B = transform2d + idx * 6;
 	if (det < 1e-5) {
-		B[0].x = 0; B[1].x = 1; B[2].x = 0;
-		B[0].y = 0; B[1].y = 0; B[2].y = 1;
+		out_B[0] = 0; out_B[1] = 1; out_B[2] = 0;
+		out_B[3] = 0; out_B[4] = 0; out_B[5] = 1;
 		return;
 	}
-	// Compute inv(v11)*v12 for X axis weighted regression
-	float* x_v12 = v_offset;
-	glm::dvec3 Bx = inv_v11 * glm::dvec3(x_v12[0], x_v12[1], x_v12[2]);
-	B[0].x = Bx.x;
-	B[1].x = Bx.y;
-	B[2].x = Bx.z;
-	v_offset += 3;
-	// Compute inv(v11)*v12 for Y axis weighted regression
-	float* y_v12 = v_offset;
-	glm::dvec3 By = inv_v11 * glm::dvec3(y_v12[0], y_v12[1], y_v12[2]);
-	B[0].y = By.x;
-	B[1].y = By.y;
-	B[2].y = By.z;
-	v_offset += 3;
+	// Compute inv(v11)
+	glm::dmat3 inv_v11 = glm::inverse(v11);
+	// Compute inv(v11)*v12 for XY axis weighted regression
+	float* x_v12 = v_offset; v_offset += 3;
+	float* y_v12 = v_offset; v_offset += 3;
+	glm::dmat3 B = inv_v11 * glm::dmat3(
+		x_v12[0], x_v12[1], x_v12[2],
+		y_v12[0], y_v12[1], y_v12[2],
+		0, 0, 0);
+	out_B[0] = B[0][0]; out_B[1] = B[0][1]; out_B[2] = B[0][2];
+	out_B[3] = B[1][0]; out_B[4] = B[1][1]; out_B[5] = B[1][2];
 }
 
 // Backward pass for the conversion of scale and rotation to a 
