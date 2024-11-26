@@ -340,7 +340,7 @@ __global__ void computeCov2DCUDA(int P,
 	float det = glm::determinant(v11);
 	tran_det[idx] = det;
 
-	float* out_B = transform2d + idx * 6;
+	float* out_B = transform2d + idx * (6 + 3 * 7);
 	if (det < 1e-5) {
 		out_B[0] = 0; out_B[1] = 1; out_B[2] = 0;
 		out_B[3] = 0; out_B[4] = 0; out_B[5] = 1;
@@ -357,6 +357,17 @@ __global__ void computeCov2DCUDA(int P,
 		0, 0, 0);
 	out_B[0] = B[0][0]; out_B[1] = B[0][1]; out_B[2] = B[0][2];
 	out_B[3] = B[1][0]; out_B[4] = B[1][1]; out_B[5] = B[1][2];
+	glm::dmat2 A_2D = glm::dmat2(B[0][1], B[0][2], B[1][1], B[1][2]);
+	glm::dvec2 b_2D = glm::dvec2(B[0][0], B[1][0]);
+	glm::mat2 conv2D_transformed = glm::transpose(A_2D) * glm::dmat2(c_xx, c_xy, c_xy, c_yy) * A_2D;
+	// Return system of equations [A|b] for weighted regression
+	float* A0 = out_B + 6; float* A1 = A0 + 7; float* A2 = A1 + 7;
+	A0[0] = T[0][0]*T[0][0]; A0[1] = 2*T[0][1]*T[0][0]; A0[2] = 2*T[0][2]*T[0][0]; A0[3] = T[0][1]*T[0][1]; A0[4] = 2*T[0][1]*T[0][2]; A0[5] = T[0][2]*T[0][2];
+	A1[0] = T[1][0]*T[1][0]; A1[1] = 2*T[1][1]*T[1][0]; A1[2] = 2*T[1][2]*T[1][0]; A1[3] = T[1][1]*T[1][1]; A1[4] = 2*T[1][1]*T[1][2]; A1[5] = T[1][2]*T[1][2];
+	A2[0] = T[0][0]*T[1][0]; A2[1] = T[0][1]*T[1][0] + T[0][0]*T[1][1]; A2[2] = T[0][2]*T[1][0] + T[0][0]*T[1][2]; A2[3] = T[0][1]*T[1][1]; A2[4] = T[0][0]*T[1][2] + T[0][2]*T[1][1]; A2[5] = T[0][2]*T[1][2];
+	A0[6] = conv2D_transformed[0][0];
+	A1[6] = conv2D_transformed[0][1];
+	A2[6] = conv2D_transformed[1][1];
 }
 
 // Backward pass for the conversion of scale and rotation to a 
