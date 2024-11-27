@@ -353,8 +353,8 @@ __global__ void computeCov2DCUDA(int P,
 	tran_det[idx] = det;
 
 	if (det < 1e-5) {
-		out_B[0] = 0; out_B[1] = 1; out_B[2] = 0;
-		out_B[3] = 0; out_B[4] = 0; out_B[5] = 1;
+		out_B[0] = 1; out_B[1] = 0; out_B[2] = 0;
+		out_B[3] = 0; out_B[4] = 1; out_B[5] = 0;
 		return;
 	}
 	// Compute inv(v11)
@@ -366,8 +366,9 @@ __global__ void computeCov2DCUDA(int P,
 		x_v12[0], x_v12[1], x_v12[2],
 		y_v12[0], y_v12[1], y_v12[2],
 		0, 0, 0);
-	out_B[0] = B[0][0]; out_B[1] = B[0][1]; out_B[2] = B[0][2];
-	out_B[3] = B[1][0]; out_B[4] = B[1][1]; out_B[5] = B[1][2];
+	// return [A|b] for 2D transformation, be careful to the order: 1,2,0
+	out_B[0] = B[0][1]; out_B[1] = B[0][2]; out_B[2] = B[0][0];
+	out_B[3] = B[1][1]; out_B[4] = B[1][2]; out_B[5] = B[1][0];
 	glm::dmat2 A_2D = glm::dmat2(B[0][1], B[0][2], B[1][1], B[1][2]);
 	glm::dvec2 b_2D = glm::dvec2(B[0][0], B[1][0]);
 	glm::mat2 conv2D_transformed = glm::transpose(A_2D) * glm::dmat2(c_xx, c_xy, c_xy, c_yy) * A_2D;
