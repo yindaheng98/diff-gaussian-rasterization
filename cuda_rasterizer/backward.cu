@@ -204,6 +204,7 @@ __global__ void computeCov2DCUDA(int P,
 
 	glm::mat3 cov2D = glm::transpose(T) * glm::transpose(Vrk) * T;
 
+	// Multiply in GLM will change the value in the matrix, so we should use the value before the multiplication
 	float* out_B = transform2d + idx * (6 + 3 * 7 + 9 + 4 + 9);
 	float* cov3D_save = out_B + 6 + 3 * 7;
 	cov3D_save[0] = Vrk[0][0]; cov3D_save[1] = Vrk[0][1]; cov3D_save[2] = Vrk[0][2];
@@ -369,9 +370,10 @@ __global__ void computeCov2DCUDA(int P,
 	// return [A|b] for 2D transformation, be careful to the order: 1,2,0
 	out_B[0] = B[0][1]; out_B[1] = B[0][2]; out_B[2] = B[0][0];
 	out_B[3] = B[1][1]; out_B[4] = B[1][2]; out_B[5] = B[1][0];
-	glm::dmat2 A_2D = glm::dmat2(B[0][1], B[0][2], B[1][1], B[1][2]);
-	glm::dvec2 b_2D = glm::dvec2(B[0][0], B[1][0]);
-	glm::mat2 conv2D_transformed = glm::transpose(A_2D) * glm::dmat2(c_xx, c_xy, c_xy, c_yy) * A_2D;
+	// Multiply in GLM will change the value in the matrix, so we should use the value before the multiplication
+	glm::mat2 A_2D = glm::mat2(out_B[0], out_B[1], out_B[3], out_B[4]);
+	glm::vec2 b_2D = glm::vec2(out_B[2], out_B[5]);
+	glm::mat2 conv2D_transformed = glm::transpose(A_2D) * glm::mat2(cov2D_save[0], cov2D_save[1], cov2D_save[2], cov2D_save[3]) * A_2D;
 	// Return system of equations [A|b] for weighted regression
 	float* A0 = out_B + 6; float* A1 = A0 + 7; float* A2 = A1 + 7;
 	A0[0] = T[0][0]*T[0][0]; A0[1] = 2*T[0][1]*T[0][0]; A0[2] = 2*T[0][2]*T[0][0]; A0[3] = T[0][1]*T[0][1]; A0[4] = 2*T[0][1]*T[0][2]; A0[5] = T[0][2]*T[0][2];
