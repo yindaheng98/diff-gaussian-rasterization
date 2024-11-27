@@ -204,6 +204,18 @@ __global__ void computeCov2DCUDA(int P,
 
 	glm::mat3 cov2D = glm::transpose(T) * glm::transpose(Vrk) * T;
 
+	float* out_B = transform2d + idx * (6 + 3 * 7 + 9 + 4 + 9);
+	float* cov3D_save = out_B + 6 + 3 * 7;
+	cov3D_save[0] = Vrk[0][0]; cov3D_save[1] = Vrk[0][1]; cov3D_save[2] = Vrk[0][2];
+	cov3D_save[3] = Vrk[1][0]; cov3D_save[4] = Vrk[1][1]; cov3D_save[5] = Vrk[1][2];
+	cov3D_save[6] = Vrk[2][0]; cov3D_save[7] = Vrk[2][1]; cov3D_save[8] = Vrk[2][2];
+	float* cov2D_save = cov3D_save + 9;
+	cov2D_save[0] = cov2D[0][0]; cov2D_save[1] = cov2D[0][1]; cov2D_save[2] = cov2D[1][0]; cov2D_save[3] = cov2D[1][1];
+	float* T_save = cov2D_save + 4;
+	T_save[0] = T[0][0]; T_save[1] = T[0][1]; T_save[2] = T[0][2];
+	T_save[3] = T[1][0]; T_save[4] = T[1][1]; T_save[5] = T[1][2];
+	T_save[6] = T[2][0]; T_save[7] = T[2][1]; T_save[8] = T[2][2];
+
 	// Use helper variables for 2D covariance entries. More compact.
 	float c_xx = cov2D[0][0];
 	float c_xy = cov2D[0][1];
@@ -340,7 +352,6 @@ __global__ void computeCov2DCUDA(int P,
 	float det = glm::determinant(v11);
 	tran_det[idx] = det;
 
-	float* out_B = transform2d + idx * (6 + 3 * 7);
 	if (det < 1e-5) {
 		out_B[0] = 0; out_B[1] = 1; out_B[2] = 0;
 		out_B[3] = 0; out_B[4] = 0; out_B[5] = 1;
