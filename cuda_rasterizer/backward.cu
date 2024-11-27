@@ -161,6 +161,7 @@ __global__ void computeCov2DCUDA(int P,
 	float* tran_alpha,
 	float* tran_det,
 	float* v11v12,
+	float Wf, float Hf,
 	bool antialiasing)
 {
 	auto idx = cg::this_grid().thread_rank();
@@ -368,8 +369,8 @@ __global__ void computeCov2DCUDA(int P,
 		y_v12[0], y_v12[1], y_v12[2],
 		0, 0, 0);
 	// return [A|b] for 2D transformation, be careful to the order: 1,2,0
-	out_B[0] = B[0][1]; out_B[1] = B[0][2]; out_B[2] = B[0][0];
-	out_B[3] = B[1][1]; out_B[4] = B[1][2]; out_B[5] = B[1][0];
+	out_B[0] = B[0][1]; out_B[1] = Wf/Hf*B[0][2]; out_B[2] = Wf*(B[0][0]-(B[0][1]+B[0][2]-1))/2; // denormalize
+	out_B[3] = Hf/Wf*B[1][1]; out_B[4] = B[1][2]; out_B[5] = Hf*(B[1][0]-(B[1][1]+B[1][2]-1))/2; // denormalize
 	// Multiply in GLM will change the value in the matrix, so we should use the value before the multiplication
 	glm::mat2 A_2D = glm::mat2(out_B[0], out_B[1], out_B[3], out_B[4]);
 	glm::vec2 b_2D = glm::vec2(out_B[2], out_B[5]);
@@ -698,6 +699,8 @@ renderCUDA(
 
 			float* offset = v11v12 + global_id * (6 + 3 + 3);
 			// Update v11 matrix for both X and Y axis weighted regression
+			float pixfx = 2 * pixf.x / (float)W - 1.; // normalized pixel coordinate
+			float pixfy = 2 * pixf.y / (float)H - 1.; // normalized pixel coordinate
 			float* xyv11 = offset;
 			// v11 = SUM([
 			//   [1,   x,   y],
@@ -705,9 +708,9 @@ renderCUDA(
 			//   [y,  xy, y^2]
 			// ] * weight)
 			float w = alpha * T;
-			float x = w * pixf.x; float x2 = x * pixf.x;
-			float y = w * pixf.y; float y2 = y * pixf.y;
-			float _xy = w * pixf.x * pixf.y;
+			float x = w * pixfx; float x2 = x * pixfx;
+			float y = w * pixfy; float y2 = y * pixfy;
+			float _xy = w * pixfx * pixfy;
 			// symmetric matrix, so only 6 values
 			atomicAdd(&(xyv11[0]),  w); atomicAdd(&(xyv11[1]),  x); atomicAdd(&(xyv11[2]), y);
 			atomicAdd(&(xyv11[3]), x2); atomicAdd(&(xyv11[4]),_xy);
@@ -717,14 +720,14 @@ renderCUDA(
 			// Update v12 matrix for both X axis weighted regression
 			float* x_v12 = offset;
 			// X axis v12 = SUM([1, x, y] * x' * weight)
-			float x_ = motion_map[pix_id].x;
+			float x_ = 2 * motion_map[pix_id].x / (float)W - 1.; // normalized pixel coordinate
 			atomicAdd(&(x_v12[0]), x_ * w); atomicAdd(&(x_v12[1]),  x_ * x); atomicAdd(&(x_v12[2]),  x_ * y);
 			offset += 3;
 
 			// Update v12 matrix for both Y axis weighted regression
 			float* y_v12 = offset;
 			// Y axis v12 = SUM([1, x, y] * y' * weight)
-			float y_ = motion_map[pix_id].y;
+			float y_ = 2 * motion_map[pix_id].y / (float)H - 1.; // normalized pixel coordinate
 			atomicAdd(&(y_v12[0]), y_ * w); atomicAdd(&(y_v12[1]),  y_ * x); atomicAdd(&(y_v12[2]),  y_ * y);
 			offset += 3;
 		}
@@ -761,6 +764,7 @@ void BACKWARD::preprocess(
 	float* tran_alpha,
 	float* trans_det,
 	float* v11v12,
+	int W, int H,
 	bool antialiasing)
 {
 	// Propagate gradients for the path of 2D conic matrix computation. 
@@ -787,6 +791,7 @@ void BACKWARD::preprocess(
 		tran_alpha,
 		trans_det,
 		v11v12,
+		(float)W, (float)H,
 		antialiasing);
 
 	// Propagate gradients for remaining steps: finish 3D mean gradients,

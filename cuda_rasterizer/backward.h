@@ -73,6 +73,7 @@ namespace BACKWARD
 		float* tran_alpha,
 		float* tran_det,
 		float* v11v12,
+		int W, int H,
 		bool antialiasing);
 }
 

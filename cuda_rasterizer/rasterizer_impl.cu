@@ -470,5 +470,6 @@ void CudaRasterizer::Rasterizer::backward(
 		tran_alpha,
 		tran_det,
 		regressionState.v11v12,
+		width, height,
 		antialiasing), debug);
 }
