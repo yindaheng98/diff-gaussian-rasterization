@@ -376,13 +376,13 @@ __global__ void computeCov2DCUDA(int P,
 	glm::vec2 b_2D = glm::vec2(out_B[2], out_B[5]);
 	glm::mat2 conv2D_transformed = glm::transpose(A_2D) * glm::mat2(cov2D_save[0], cov2D_save[1], cov2D_save[2], cov2D_save[3]) * A_2D;
 	// Return system of equations [A|b] for weighted regression
-	float* A0 = out_B + 6; float* A1 = A0 + 7; float* A2 = A1 + 7;
+	float* A0 = out_B + 6; float* A2 = A0 + 7; float* A1 = A2 + 7; // for A0 for x, A1 for z, A2 for y, so the order is A0, A2, A1
 	A0[0] = T[0][0]*T[0][0]; A0[1] = 2*T[0][1]*T[0][0]; A0[2] = 2*T[0][2]*T[0][0]; A0[3] = T[0][1]*T[0][1]; A0[4] = 2*T[0][1]*T[0][2]; A0[5] = T[0][2]*T[0][2];
 	A1[0] = T[1][0]*T[1][0]; A1[1] = 2*T[1][1]*T[1][0]; A1[2] = 2*T[1][2]*T[1][0]; A1[3] = T[1][1]*T[1][1]; A1[4] = 2*T[1][1]*T[1][2]; A1[5] = T[1][2]*T[1][2];
-	A2[0] = T[0][0]*T[1][0]; A2[1] = T[0][1]*T[1][0] + T[0][0]*T[1][1]; A2[2] = T[0][2]*T[1][0] + T[0][0]*T[1][2]; A2[3] = T[0][1]*T[1][1]; A2[4] = T[0][0]*T[1][2] + T[0][2]*T[1][1]; A2[5] = T[0][2]*T[1][2];
-	A0[6] = conv2D_transformed[0][0];
-	A1[6] = conv2D_transformed[0][1];
-	A2[6] = conv2D_transformed[1][1];
+	A2[0] = T[1][0]*T[0][0]; A2[1] = T[1][1]*T[0][0] + T[1][0]*T[0][1]; A2[2] = T[1][2]*T[0][0] + T[1][0]*T[0][2]; A2[3] = T[1][1]*T[0][1]; A2[4] = T[1][1]*T[0][2] + T[1][2]*T[0][1]; A2[5] = T[1][2]*T[0][2];
+	A0[6] = conv2D_transformed[0][0]; // x
+	A1[6] = conv2D_transformed[1][1]; // z
+	A2[6] = conv2D_transformed[0][1]; // y
 }
 
 // Backward pass for the conversion of scale and rotation to a 
