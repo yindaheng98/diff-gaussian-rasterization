@@ -388,6 +388,7 @@ void CudaRasterizer::Rasterizer::backward(
 	float* motion_alpha,
 	float* motion_det,
 	float* conv3d_equations,
+	int* pixhit,
 	bool antialiasing,
 	bool debug)
 {
@@ -436,6 +437,7 @@ void CudaRasterizer::Rasterizer::backward(
 		dL_dinvdepth,
 		(float2*)motion_map,
 		fusion_alpha_threshold,
+		pixhit,
 		regressionState.v11v12), debug);
 
 	// Take care of the rest of preprocessing. Was the precomputed covariance

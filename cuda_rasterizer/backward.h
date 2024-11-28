@@ -41,6 +41,7 @@ namespace BACKWARD
 		float* dL_dinvdepths,
 		const float2* motion_map,
 		float fusion_alpha_threshold,
+		int* pixhit,
 		float* v11v12);
 
 	void preprocess(

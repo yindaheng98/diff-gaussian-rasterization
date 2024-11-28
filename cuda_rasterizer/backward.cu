@@ -526,6 +526,7 @@ renderCUDA(
 	float* __restrict__ dL_dinvdepths,
 	const float2* __restrict__ motion_map,
 	float fusion_alpha_threshold,
+	int* __restrict__ pixhit,
 	float* __restrict__ v11v12
 )
 {
@@ -725,6 +726,9 @@ renderCUDA(
 			float y_ = 2 * motion_map[pix_id].y / (float)H - 1.; // normalized pixel coordinate
 			atomicAdd(&(y_v12[0]), y_ * w); atomicAdd(&(y_v12[1]),  y_ * x); atomicAdd(&(y_v12[2]),  y_ * y);
 			offset += 3;
+
+			// Update pix hit counter
+			atomicAdd(&(pixhit[global_id]), 1);
 		}
 	}
 }
@@ -836,6 +840,7 @@ void BACKWARD::render(
 	float* dL_dinvdepths,
 	const float2* motion_map,
 	float fusion_alpha_threshold,
+	int* pixhit,
 	float* v11v12)
 {
 	renderCUDA<NUM_CHANNELS> << <grid, block >> >(
@@ -858,6 +863,7 @@ void BACKWARD::render(
 		dL_dinvdepths,
 		motion_map,
 		fusion_alpha_threshold,
+		pixhit,
 		v11v12
 		);
 }
