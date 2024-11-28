@@ -176,7 +176,7 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
   torch::Tensor dL_dscales = torch::zeros({P, 3}, means3D.options());
   torch::Tensor dL_drotations = torch::zeros({P, 4}, means3D.options());
   torch::Tensor dL_dinvdepths = torch::zeros({0, 1}, means3D.options());
-  torch::Tensor motion2d = torch::zeros({P, 6 + 9 + 4 + 9}, means3D.options());
+  torch::Tensor motion2d = torch::zeros({P, 6 + 9}, means3D.options());
   torch::Tensor motion_alpha = torch::zeros({P}, means3D.options());
   torch::Tensor motion_det = torch::zeros({P}, means3D.options());
   torch::Tensor conv3d_equations = torch::zeros({P, 3, 7}, means3D.options());

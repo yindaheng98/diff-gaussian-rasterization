@@ -206,19 +206,6 @@ __global__ void computeCov2DCUDA(int P,
 
 	glm::mat3 cov2D = glm::transpose(T) * glm::transpose(Vrk) * T;
 
-	// Multiply in GLM will change the value in the matrix, so we should use the value before the multiplication
-	float* out_B = motion2d + idx * (6 + 9 + 4 + 9);
-	float* cov3D_save = out_B + 6;
-	cov3D_save[0] = Vrk[0][0]; cov3D_save[1] = Vrk[0][1]; cov3D_save[2] = Vrk[0][2];
-	cov3D_save[3] = Vrk[1][0]; cov3D_save[4] = Vrk[1][1]; cov3D_save[5] = Vrk[1][2];
-	cov3D_save[6] = Vrk[2][0]; cov3D_save[7] = Vrk[2][1]; cov3D_save[8] = Vrk[2][2];
-	float* cov2D_save = cov3D_save + 9;
-	cov2D_save[0] = cov2D[0][0]; cov2D_save[1] = cov2D[0][1]; cov2D_save[2] = cov2D[1][0]; cov2D_save[3] = cov2D[1][1];
-	float* T_save = cov2D_save + 4;
-	T_save[0] = T[0][0]; T_save[1] = T[0][1]; T_save[2] = T[0][2];
-	T_save[3] = T[1][0]; T_save[4] = T[1][1]; T_save[5] = T[1][2];
-	T_save[6] = T[2][0]; T_save[7] = T[2][1]; T_save[8] = T[2][2];
-
 	// Use helper variables for 2D covariance entries. More compact.
 	float c_xx = cov2D[0][0];
 	float c_xy = cov2D[0][1];
@@ -343,6 +330,13 @@ __global__ void computeCov2DCUDA(int P,
 	// Additional mean gradient is accumulated in BACKWARD::preprocess.
 	dL_dmeans[idx] = dL_dmean;
 
+	float* out_B = motion2d + idx * (6 + 9);
+	// (scaffold) save T for verify
+	float* T_save = out_B + 6;
+	T_save[0] = T[0][0]; T_save[1] = T[0][1]; T_save[2] = T[0][2];
+	T_save[3] = T[1][0]; T_save[4] = T[1][1]; T_save[5] = T[1][2];
+	T_save[6] = T[2][0]; T_save[7] = T[2][1]; T_save[8] = T[2][2];
+
 	float* v_offset = v11v12 + idx * (6 + 3 + 3);
 	motion_alpha[idx] = v_offset[0];
 	// Compute inv(v11) for weighted regression
@@ -375,7 +369,7 @@ __global__ void computeCov2DCUDA(int P,
 	// Multiply in GLM will change the value in the matrix, so we should use the value before the multiplication
 	glm::mat2 A_2D = glm::mat2(out_B[0], out_B[1], out_B[3], out_B[4]);
 	glm::vec2 b_2D = glm::vec2(out_B[2], out_B[5]);
-	glm::mat2 conv2D_transformed = glm::transpose(A_2D) * glm::mat2(cov2D_save[0], cov2D_save[1], cov2D_save[2], cov2D_save[3]) * A_2D;
+	glm::mat2 conv2D_transformed = glm::transpose(A_2D) * glm::mat2(cov2D[0][0], cov2D[0][1], cov2D[1][0], cov2D[1][1]) * A_2D;
 	// Return system of equations [A|b] for weighted regression
 	float* A0 = conv3d_equations + idx * 3 * 7; float* A2 = A0 + 7; float* A1 = A2 + 7; // for A0 for x, A1 for z, A2 for y, so the order is A0, A2, A1
 	A0[0] = T[0][0]*T[0][0]; A0[1] = 2*T[0][1]*T[0][0]; A0[2] = 2*T[0][2]*T[0][0]; A0[3] = T[0][1]*T[0][1]; A0[4] = 2*T[0][1]*T[0][2]; A0[5] = T[0][2]*T[0][2];
