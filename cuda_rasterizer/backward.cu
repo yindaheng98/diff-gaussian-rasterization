@@ -157,10 +157,10 @@ __global__ void computeCov2DCUDA(int P,
 	const float* dL_dinvdepth,
 	float3* dL_dmeans,
 	float* dL_dcov,
-	float* tran_Ab2d,
-	float* tran_alpha,
-	float* tran_det,
-	float* tran_equations,
+	float* motion2d,
+	float* motion_alpha,
+	float* motion_det,
+	float* conv3d_equations,
 	float* v11v12,
 	float Wf, float Hf,
 	bool antialiasing)
@@ -207,7 +207,7 @@ __global__ void computeCov2DCUDA(int P,
 	glm::mat3 cov2D = glm::transpose(T) * glm::transpose(Vrk) * T;
 
 	// Multiply in GLM will change the value in the matrix, so we should use the value before the multiplication
-	float* out_B = tran_Ab2d + idx * (6 + 9 + 4 + 9);
+	float* out_B = motion2d + idx * (6 + 9 + 4 + 9);
 	float* cov3D_save = out_B + 6;
 	cov3D_save[0] = Vrk[0][0]; cov3D_save[1] = Vrk[0][1]; cov3D_save[2] = Vrk[0][2];
 	cov3D_save[3] = Vrk[1][0]; cov3D_save[4] = Vrk[1][1]; cov3D_save[5] = Vrk[1][2];
@@ -344,7 +344,7 @@ __global__ void computeCov2DCUDA(int P,
 	dL_dmeans[idx] = dL_dmean;
 
 	float* v_offset = v11v12 + idx * (6 + 3 + 3);
-	tran_alpha[idx] = v_offset[0];
+	motion_alpha[idx] = v_offset[0];
 	// Compute inv(v11) for weighted regression
 	glm::dmat3 v11 = glm::dmat3(
 		v_offset[0], v_offset[1], v_offset[2],
@@ -353,7 +353,7 @@ __global__ void computeCov2DCUDA(int P,
 	v_offset += 6;
 	// Compute determinant
 	float det = glm::determinant(v11);
-	tran_det[idx] = det;
+	motion_det[idx] = det;
 
 	if (det < 1e-5) {
 		out_B[0] = 1; out_B[1] = 0; out_B[2] = 0;
@@ -377,7 +377,7 @@ __global__ void computeCov2DCUDA(int P,
 	glm::vec2 b_2D = glm::vec2(out_B[2], out_B[5]);
 	glm::mat2 conv2D_transformed = glm::transpose(A_2D) * glm::mat2(cov2D_save[0], cov2D_save[1], cov2D_save[2], cov2D_save[3]) * A_2D;
 	// Return system of equations [A|b] for weighted regression
-	float* A0 = tran_equations + idx * 3 * 7; float* A2 = A0 + 7; float* A1 = A2 + 7; // for A0 for x, A1 for z, A2 for y, so the order is A0, A2, A1
+	float* A0 = conv3d_equations + idx * 3 * 7; float* A2 = A0 + 7; float* A1 = A2 + 7; // for A0 for x, A1 for z, A2 for y, so the order is A0, A2, A1
 	A0[0] = T[0][0]*T[0][0]; A0[1] = 2*T[0][1]*T[0][0]; A0[2] = 2*T[0][2]*T[0][0]; A0[3] = T[0][1]*T[0][1]; A0[4] = 2*T[0][1]*T[0][2]; A0[5] = T[0][2]*T[0][2];
 	A1[0] = T[1][0]*T[1][0]; A1[1] = 2*T[1][1]*T[1][0]; A1[2] = 2*T[1][2]*T[1][0]; A1[3] = T[1][1]*T[1][1]; A1[4] = 2*T[1][1]*T[1][2]; A1[5] = T[1][2]*T[1][2];
 	A2[0] = T[1][0]*T[0][0]; A2[1] = T[1][1]*T[0][0] + T[1][0]*T[0][1]; A2[2] = T[1][2]*T[0][0] + T[1][0]*T[0][2]; A2[3] = T[1][1]*T[0][1]; A2[4] = T[1][1]*T[0][2] + T[1][2]*T[0][1]; A2[5] = T[1][2]*T[0][2];
@@ -761,10 +761,10 @@ void BACKWARD::preprocess(
 	float* dL_dsh,
 	glm::vec3* dL_dscale,
 	glm::vec4* dL_drot,
-	float* tran_Ab2d,
-	float* tran_alpha,
-	float* tran_det,
-	float* tran_equations,
+	float* motion2d,
+	float* motion_alpha,
+	float* motion_det,
+	float* conv3d_equations,
 	float* v11v12,
 	int W, int H,
 	bool antialiasing)
@@ -789,10 +789,10 @@ void BACKWARD::preprocess(
 		dL_dinvdepth,
 		(float3*)dL_dmean3D,
 		dL_dcov3D,
-		tran_Ab2d,
-		tran_alpha,
-		tran_det,
-		tran_equations,
+		motion2d,
+		motion_alpha,
+		motion_det,
+		conv3d_equations,
 		v11v12,
 		(float)W, (float)H,
 		antialiasing);
