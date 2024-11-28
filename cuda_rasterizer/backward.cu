@@ -330,12 +330,12 @@ __global__ void computeCov2DCUDA(int P,
 	// Additional mean gradient is accumulated in BACKWARD::preprocess.
 	dL_dmeans[idx] = dL_dmean;
 
-	float* out_B = motion2d + idx * (6 + 9);
-	// (scaffold) save T for verify
-	float* T_save = out_B + 6;
-	T_save[0] = T[0][0]; T_save[1] = T[0][1]; T_save[2] = T[0][2];
-	T_save[3] = T[1][0]; T_save[4] = T[1][1]; T_save[5] = T[1][2];
-	T_save[6] = T[2][0]; T_save[7] = T[2][1]; T_save[8] = T[2][2];
+	float* out_B = motion2d + idx * 6;
+	// // (scaffold) save T for verify
+	// float* T_save = out_B + 6;
+	// T_save[0] = T[0][0]; T_save[1] = T[0][1]; T_save[2] = T[0][2];
+	// T_save[3] = T[1][0]; T_save[4] = T[1][1]; T_save[5] = T[1][2];
+	// T_save[6] = T[2][0]; T_save[7] = T[2][1]; T_save[8] = T[2][2];
 
 	float* v_offset = v11v12 + idx * (6 + 3 + 3);
 	motion_alpha[idx] = v_offset[0];
