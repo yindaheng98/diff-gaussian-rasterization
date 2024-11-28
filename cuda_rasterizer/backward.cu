@@ -157,9 +157,10 @@ __global__ void computeCov2DCUDA(int P,
 	const float* dL_dinvdepth,
 	float3* dL_dmeans,
 	float* dL_dcov,
-	float* transform2d,
+	float* tran_Ab2d,
 	float* tran_alpha,
 	float* tran_det,
+	float* tran_equations,
 	float* v11v12,
 	float Wf, float Hf,
 	bool antialiasing)
@@ -206,8 +207,8 @@ __global__ void computeCov2DCUDA(int P,
 	glm::mat3 cov2D = glm::transpose(T) * glm::transpose(Vrk) * T;
 
 	// Multiply in GLM will change the value in the matrix, so we should use the value before the multiplication
-	float* out_B = transform2d + idx * (6 + 3 * 7 + 9 + 4 + 9);
-	float* cov3D_save = out_B + 6 + 3 * 7;
+	float* out_B = tran_Ab2d + idx * (6 + 9 + 4 + 9);
+	float* cov3D_save = out_B + 6;
 	cov3D_save[0] = Vrk[0][0]; cov3D_save[1] = Vrk[0][1]; cov3D_save[2] = Vrk[0][2];
 	cov3D_save[3] = Vrk[1][0]; cov3D_save[4] = Vrk[1][1]; cov3D_save[5] = Vrk[1][2];
 	cov3D_save[6] = Vrk[2][0]; cov3D_save[7] = Vrk[2][1]; cov3D_save[8] = Vrk[2][2];
@@ -376,7 +377,7 @@ __global__ void computeCov2DCUDA(int P,
 	glm::vec2 b_2D = glm::vec2(out_B[2], out_B[5]);
 	glm::mat2 conv2D_transformed = glm::transpose(A_2D) * glm::mat2(cov2D_save[0], cov2D_save[1], cov2D_save[2], cov2D_save[3]) * A_2D;
 	// Return system of equations [A|b] for weighted regression
-	float* A0 = out_B + 6; float* A2 = A0 + 7; float* A1 = A2 + 7; // for A0 for x, A1 for z, A2 for y, so the order is A0, A2, A1
+	float* A0 = tran_equations + idx * 3 * 7; float* A2 = A0 + 7; float* A1 = A2 + 7; // for A0 for x, A1 for z, A2 for y, so the order is A0, A2, A1
 	A0[0] = T[0][0]*T[0][0]; A0[1] = 2*T[0][1]*T[0][0]; A0[2] = 2*T[0][2]*T[0][0]; A0[3] = T[0][1]*T[0][1]; A0[4] = 2*T[0][1]*T[0][2]; A0[5] = T[0][2]*T[0][2];
 	A1[0] = T[1][0]*T[1][0]; A1[1] = 2*T[1][1]*T[1][0]; A1[2] = 2*T[1][2]*T[1][0]; A1[3] = T[1][1]*T[1][1]; A1[4] = 2*T[1][1]*T[1][2]; A1[5] = T[1][2]*T[1][2];
 	A2[0] = T[1][0]*T[0][0]; A2[1] = T[1][1]*T[0][0] + T[1][0]*T[0][1]; A2[2] = T[1][2]*T[0][0] + T[1][0]*T[0][2]; A2[3] = T[1][1]*T[0][1]; A2[4] = T[1][1]*T[0][2] + T[1][2]*T[0][1]; A2[5] = T[1][2]*T[0][2];
@@ -760,9 +761,10 @@ void BACKWARD::preprocess(
 	float* dL_dsh,
 	glm::vec3* dL_dscale,
 	glm::vec4* dL_drot,
-	float* transform2d,
+	float* tran_Ab2d,
 	float* tran_alpha,
-	float* trans_det,
+	float* tran_det,
+	float* tran_equations,
 	float* v11v12,
 	int W, int H,
 	bool antialiasing)
@@ -787,9 +789,10 @@ void BACKWARD::preprocess(
 		dL_dinvdepth,
 		(float3*)dL_dmean3D,
 		dL_dcov3D,
-		transform2d,
+		tran_Ab2d,
 		tran_alpha,
-		trans_det,
+		tran_det,
+		tran_equations,
 		v11v12,
 		(float)W, (float)H,
 		antialiasing);

@@ -69,9 +69,10 @@ namespace BACKWARD
 		float* dL_dsh,
 		glm::vec3* dL_dscale,
 		glm::vec4* dL_drot,
-		float* transform2d,
+		float* tran_Ab2d,
 		float* tran_alpha,
 		float* tran_det,
+		float* tran_equations,
 		float* v11v12,
 		int W, int H,
 		bool antialiasing);

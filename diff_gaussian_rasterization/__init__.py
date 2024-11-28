@@ -219,8 +219,8 @@ class _RasterizeGaussians(torch.autograd.Function):
                 raster_settings.debug)
 
         # Compute gradients for relevant tensors by invoking backward method
-        grad_means2D, grad_colors_precomp, grad_opacities, grad_means3D, grad_cov3Ds_precomp, grad_sh, grad_scales, grad_rotations, transform2d, tran_alpha, tran_det, regressionBuffer = _C.pixel_motion_fusion(*args)        
-        return color, radii, invdepths, transform2d, tran_alpha, tran_det
+        grad_means2D, grad_colors_precomp, grad_opacities, grad_means3D, grad_cov3Ds_precomp, grad_sh, grad_scales, grad_rotations, tran_Ab2d, tran_alpha, tran_det, tran_equations, regressionBuffer = _C.pixel_motion_fusion(*args)        
+        return color, radii, invdepths, tran_Ab2d, tran_alpha, tran_det, tran_equations
 
 class GaussianRasterizationSettings(NamedTuple):
     image_height: int

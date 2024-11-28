@@ -384,9 +384,10 @@ void CudaRasterizer::Rasterizer::backward(
 	std::function<char* (size_t)> regressionBuffer,
 	float* motion_map,
 	float fusion_alpha_threshold,
-	float* transform2d,
+	float* tran_Ab2d,
 	float* tran_alpha,
 	float* tran_det,
+	float* tran_equations,
 	bool antialiasing,
 	bool debug)
 {
@@ -466,9 +467,10 @@ void CudaRasterizer::Rasterizer::backward(
 		dL_dsh,
 		(glm::vec3*)dL_dscale,
 		(glm::vec4*)dL_drot,
-		transform2d,
+		tran_Ab2d,
 		tran_alpha,
 		tran_det,
+		tran_equations,
 		regressionState.v11v12,
 		width, height,
 		antialiasing), debug);

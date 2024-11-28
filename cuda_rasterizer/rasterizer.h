@@ -89,9 +89,10 @@ namespace CudaRasterizer
 			std::function<char* (size_t)> regressionBuffer,
 			float* motion_map,
 			float fusion_alpha_threshold,
-			float* transform2d,
+			float* tran_Ab2d,
 			float* tran_alpha,
 			float* tran_det,
+			float* tran_equations,
 			bool antialiasing,
 			bool debug);
 	};
