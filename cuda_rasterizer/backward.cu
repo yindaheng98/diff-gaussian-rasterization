@@ -160,7 +160,6 @@ __global__ void computeCov2DCUDA(int P,
 	float* motion2d,
 	float* motion_alpha,
 	float* motion_det,
-	float* conv3d_equations,
 	float* v11v12,
 	float Wf, float Hf,
 	bool antialiasing)
@@ -366,18 +365,6 @@ __global__ void computeCov2DCUDA(int P,
 	// return [A|b] for 2D transformation, be careful to the order: 1,2,0
 	out_B[0] = B[0][1]; out_B[1] = Wf/Hf*B[0][2]; out_B[2] = Wf*(B[0][0]-(B[0][1]+B[0][2]-1))/2; // denormalize
 	out_B[3] = Hf/Wf*B[1][1]; out_B[4] = B[1][2]; out_B[5] = Hf*(B[1][0]-(B[1][1]+B[1][2]-1))/2; // denormalize
-	// Multiply in GLM will change the value in the matrix, so we should use the value before the multiplication
-	glm::mat2 A_2D = glm::mat2(out_B[0], out_B[1], out_B[3], out_B[4]);
-	glm::vec2 b_2D = glm::vec2(out_B[2], out_B[5]);
-	glm::mat2 conv2D_transformed = glm::transpose(A_2D) * glm::mat2(cov2D[0][0], cov2D[0][1], cov2D[1][0], cov2D[1][1]) * A_2D;
-	// Return system of equations [A|b] for weighted regression
-	float* A0 = conv3d_equations + idx * 3 * 7; float* A2 = A0 + 7; float* A1 = A2 + 7; // for A0 for x, A1 for z, A2 for y, so the order is A0, A2, A1
-	A0[0] = T[0][0]*T[0][0]; A0[1] = 2*T[0][1]*T[0][0]; A0[2] = 2*T[0][2]*T[0][0]; A0[3] = T[0][1]*T[0][1]; A0[4] = 2*T[0][1]*T[0][2]; A0[5] = T[0][2]*T[0][2];
-	A1[0] = T[1][0]*T[1][0]; A1[1] = 2*T[1][1]*T[1][0]; A1[2] = 2*T[1][2]*T[1][0]; A1[3] = T[1][1]*T[1][1]; A1[4] = 2*T[1][1]*T[1][2]; A1[5] = T[1][2]*T[1][2];
-	A2[0] = T[1][0]*T[0][0]; A2[1] = T[1][1]*T[0][0] + T[1][0]*T[0][1]; A2[2] = T[1][2]*T[0][0] + T[1][0]*T[0][2]; A2[3] = T[1][1]*T[0][1]; A2[4] = T[1][1]*T[0][2] + T[1][2]*T[0][1]; A2[5] = T[1][2]*T[0][2];
-	A0[6] = conv2D_transformed[0][0]; // x
-	A1[6] = conv2D_transformed[1][1]; // z
-	A2[6] = conv2D_transformed[0][1]; // y
 }
 
 // Backward pass for the conversion of scale and rotation to a 
@@ -762,7 +749,6 @@ void BACKWARD::preprocess(
 	float* motion2d,
 	float* motion_alpha,
 	float* motion_det,
-	float* conv3d_equations,
 	float* v11v12,
 	int W, int H,
 	bool antialiasing)
@@ -790,7 +776,6 @@ void BACKWARD::preprocess(
 		motion2d,
 		motion_alpha,
 		motion_det,
-		conv3d_equations,
 		v11v12,
 		(float)W, (float)H,
 		antialiasing);

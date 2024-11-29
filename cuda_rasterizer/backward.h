@@ -73,7 +73,6 @@ namespace BACKWARD
 		float* motion2d,
 		float* motion_alpha,
 		float* motion_det,
-		float* conv3d_equations,
 		float* v11v12,
 		int W, int H,
 		bool antialiasing);

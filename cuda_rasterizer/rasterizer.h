@@ -92,7 +92,6 @@ namespace CudaRasterizer
 			float* motion2d,
 			float* motion_alpha,
 			float* motion_det,
-			float* conv3d_equations,
 			int* pixhit,
 			bool antialiasing,
 			bool debug);

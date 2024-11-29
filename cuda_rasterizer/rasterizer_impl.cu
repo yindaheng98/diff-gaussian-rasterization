@@ -387,7 +387,6 @@ void CudaRasterizer::Rasterizer::backward(
 	float* motion2d,
 	float* motion_alpha,
 	float* motion_det,
-	float* conv3d_equations,
 	int* pixhit,
 	bool antialiasing,
 	bool debug)
@@ -472,7 +471,6 @@ void CudaRasterizer::Rasterizer::backward(
 		motion2d,
 		motion_alpha,
 		motion_det,
-		conv3d_equations,
 		regressionState.v11v12,
 		width, height,
 		antialiasing), debug);
