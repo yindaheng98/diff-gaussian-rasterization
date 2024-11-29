@@ -66,3 +66,37 @@ def solve_cov3D(mean, fovx, fovy, width, height, view_matrix, cov2D):
     T = compute_T(J, view_matrix)
     X, Y = compute_cov3D_equations(T, cov2D)
     return X, Y
+
+
+def unflatten_symmetry_2x2(A):
+    '''Unflatten a 2x2 matrix'''
+    m = torch.zeros((A.shape[0], 2, 2), device=A.device)
+    m[..., 0, 0] = A[..., 0]
+    m[..., 0, 1] = A[..., 1]
+    m[..., 1, 0] = A[..., 1]
+    m[..., 1, 1] = A[..., 2]
+    return m
+
+
+def unflatten_symmetry_3x3(A):
+    '''Unflatten a 3x3 matrix'''
+    m = torch.zeros((A.shape[0], 3, 3), device=A.device)
+    m[..., 0, 0] = A[..., 0]
+    m[..., 0, 1] = A[..., 1]
+    m[..., 0, 2] = A[..., 2]
+    m[..., 1, 0] = A[..., 1]
+    m[..., 1, 1] = A[..., 3]
+    m[..., 1, 2] = A[..., 4]
+    m[..., 2, 0] = A[..., 2]
+    m[..., 2, 1] = A[..., 4]
+    m[..., 2, 2] = A[..., 5]
+    return m
+
+
+def compute_cov2D(T, cov3D):
+    '''Compute the 2D covariance matrix'''
+    return T.bmm(cov3D).bmm(T.transpose(1, 2))
+
+
+def transform_cov2D(A, cov2D):
+    return A.bmm(cov2D).bmm(A.transpose(1, 2))
