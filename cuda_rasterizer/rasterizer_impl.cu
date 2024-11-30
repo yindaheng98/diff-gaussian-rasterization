@@ -298,7 +298,7 @@ int CudaRasterizer::Rasterizer::forward(
 	size_t binning_chunk_size = required<BinningState>(num_rendered);
 	char* binning_chunkptr = binningBuffer(binning_chunk_size);
 	BinningState binningState = BinningState::fromChunk(binning_chunkptr, num_rendered);
-	float* out_feature_ptr = out_feature(num_visiable * n_features);
+	float* out_feature_ptr = out_feature(num_visiable);
 	float* out_feature_alpha_ptr = out_feature_alpha(num_visiable);
 	CHECK_CUDA(cudaMemset(out_feature_ptr, 0, sizeof(float) * num_visiable * n_features), debug);
 	CHECK_CUDA(cudaMemset(out_feature_alpha_ptr, 0, sizeof(float) * num_visiable), debug);

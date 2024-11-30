@@ -40,6 +40,14 @@ std::function<float*(size_t N)> resizeFunctionalFloat(torch::Tensor& t) {
     return lambda;
 }
 
+std::function<float*(size_t N)> resizeFunctionalFloat2D(torch::Tensor& t, size_t size_dim2) {
+    auto lambda = [&t, size_dim2](size_t N) {
+        t.resize_({(long long)N, (long long)size_dim2});
+		return reinterpret_cast<float*>(t.contiguous().data_ptr());
+    };
+    return lambda;
+}
+
 std::tuple<int, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
 RasterizeGaussiansCUDA(
 	const torch::Tensor& background,
@@ -101,7 +109,7 @@ RasterizeGaussiansCUDA(
   std::function<char*(size_t)> geomFunc = resizeFunctional(geomBuffer);
   std::function<char*(size_t)> binningFunc = resizeFunctional(binningBuffer);
   std::function<char*(size_t)> imgFunc = resizeFunctional(imgBuffer);
-  std::function<float*(size_t)> featureFunc = resizeFunctionalFloat(out_feature);
+  std::function<float*(size_t)> featureFunc = resizeFunctionalFloat2D(out_feature, (size_t)n_features);
   std::function<float*(size_t)> featureAlphaFunc = resizeFunctionalFloat(out_feature_alpha);
   
   int rendered = 0;
