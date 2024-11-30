@@ -295,7 +295,8 @@ renderCUDA(
 	const float fusion_alpha_threshold,
 	float* __restrict__ feature_map,
 	float* __restrict__ out_feature,
-	float* __restrict__ out_feature_alpha)
+	float* __restrict__ out_feature_alpha,
+	int* __restrict__ out_feature_idx)
 {
 	// Identify current tile and associated min/max pixel range.
 	auto block = cg::this_thread_block();
@@ -386,10 +387,11 @@ renderCUDA(
 
 			// Feature fusion.
 			if (blend_alpha > fusion_alpha_threshold)
-			{
+			{	
+				int idx = out_feature_idx[collected_id[j]];
 				for (int ch = 0; ch < n_features; ch++)
-					atomicAdd(&(out_feature[collected_id[j] * n_features + ch]), pix_feature_map[ch] * blend_alpha);
-				atomicAdd(&(out_feature_alpha[collected_id[j]]), blend_alpha);
+					atomicAdd(&(out_feature[idx * n_features + ch]), pix_feature_map[ch] * blend_alpha);
+				atomicAdd(&(out_feature_alpha[idx]), blend_alpha);
 			}
 
 			if(invdepth)
@@ -435,7 +437,8 @@ void FORWARD::render(
 	const float fusion_alpha_threshold,
 	float* feature_map,
 	float* out_feature,
-	float* out_feature_alpha)
+	float* out_feature_alpha,
+	int* out_feature_idx)
 {
 	renderCUDA<NUM_CHANNELS> << <grid, block >> > (
 		ranges,
@@ -454,7 +457,8 @@ void FORWARD::render(
 		fusion_alpha_threshold,
 		feature_map,
 		out_feature,
-		out_feature_alpha);
+		out_feature_alpha,
+		out_feature_idx);
 }
 
 void FORWARD::preprocess(int P, int D, int M,

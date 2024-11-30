@@ -222,8 +222,8 @@ int CudaRasterizer::Rasterizer::forward(
 	const int n_features,
 	const float fusion_alpha_threshold,
 	float* feature_map,
-	float* out_feature,
-	float* out_feature_alpha,
+	std::function<float* (size_t)> out_feature,
+	std::function<float* (size_t)> out_feature_alpha,
 	int* out_feature_idx,
 	int* radii,
 	bool debug)
@@ -292,10 +292,16 @@ int CudaRasterizer::Rasterizer::forward(
 	// Retrieve total number of Gaussian instances to launch and resize aux buffers
 	int num_rendered;
 	CHECK_CUDA(cudaMemcpy(&num_rendered, geomState.point_offsets + P - 1, sizeof(int), cudaMemcpyDeviceToHost), debug);
+	int num_visiable;
+	CHECK_CUDA(cudaMemcpy(&num_visiable, geomState.visiable_count, sizeof(int), cudaMemcpyDeviceToHost), debug);
 
 	size_t binning_chunk_size = required<BinningState>(num_rendered);
 	char* binning_chunkptr = binningBuffer(binning_chunk_size);
 	BinningState binningState = BinningState::fromChunk(binning_chunkptr, num_rendered);
+	float* out_feature_ptr = out_feature(num_visiable * n_features);
+	float* out_feature_alpha_ptr = out_feature_alpha(num_visiable);
+	CHECK_CUDA(cudaMemset(out_feature_ptr, 0, sizeof(float) * num_visiable * n_features), debug);
+	CHECK_CUDA(cudaMemset(out_feature_alpha_ptr, 0, sizeof(float) * num_visiable), debug);
 
 	// For each instance to be rendered, produce adequate [ tile | depth ] key 
 	// and corresponding dublicated Gaussian indices to be sorted
@@ -349,8 +355,9 @@ int CudaRasterizer::Rasterizer::forward(
 		n_features,
 		fusion_alpha_threshold,
 		feature_map,
-		out_feature,
-		out_feature_alpha), debug)
+		out_feature_ptr,
+		out_feature_alpha_ptr,
+		out_feature_idx), debug)
 
 	return num_rendered;
 }

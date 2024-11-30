@@ -54,8 +54,8 @@ namespace CudaRasterizer
 			const int n_features,
 			const float fusion_alpha_threshold,
 			float* feature_map,
-			float* out_feature,
-			float* out_feature_alpha,
+			std::function<float* (size_t)> out_feature,
+			std::function<float* (size_t)> out_feature_alpha,
 			int* out_feature_idx,
 			int* radii = nullptr,
 			bool debug = false);

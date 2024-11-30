@@ -69,7 +69,8 @@ namespace FORWARD
 		const float fusion_alpha_threshold,
 		float* feature_map,
 		float* out_feature,
-		float* out_feature_alpha);
+		float* out_feature_alpha,
+		int* out_feature_idx);
 }
 
 
