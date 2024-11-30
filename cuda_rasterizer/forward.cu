@@ -173,6 +173,8 @@ __global__ void preprocessCUDA(int P, int D, int M,
 	float4* conic_opacity,
 	const dim3 grid,
 	uint32_t* tiles_touched,
+	int* visiable_count,
+	int* out_feature_idx,
 	bool prefiltered,
 	bool antialiasing)
 {
@@ -266,6 +268,9 @@ __global__ void preprocessCUDA(int P, int D, int M,
 
 
 	tiles_touched[idx] = (rect_max.y - rect_min.y) * (rect_max.x - rect_min.x);
+
+	// If Gaussian is visible, increment counter.
+	out_feature_idx[idx] = atomicAdd(visiable_count, 1);
 }
 
 // Main rasterization method. Collaboratively works on one tile per
@@ -476,6 +481,8 @@ void FORWARD::preprocess(int P, int D, int M,
 	float4* conic_opacity,
 	const dim3 grid,
 	uint32_t* tiles_touched,
+	int* visiable_count,
+	int* out_feature_idx,
 	bool prefiltered,
 	bool antialiasing)
 {
@@ -504,6 +511,8 @@ void FORWARD::preprocess(int P, int D, int M,
 		conic_opacity,
 		grid,
 		tiles_touched,
+		visiable_count,
+		out_feature_idx,
 		prefiltered,
 		antialiasing
 		);

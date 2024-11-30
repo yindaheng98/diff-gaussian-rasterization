@@ -56,6 +56,7 @@ namespace CudaRasterizer
 			float* feature_map,
 			float* out_feature,
 			float* out_feature_alpha,
+			int* out_feature_idx,
 			int* radii = nullptr,
 			bool debug = false);
 

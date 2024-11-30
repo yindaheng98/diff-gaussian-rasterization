@@ -166,6 +166,7 @@ CudaRasterizer::GeometryState CudaRasterizer::GeometryState::fromChunk(char*& ch
 	cub::DeviceScan::InclusiveSum(nullptr, geom.scan_size, geom.tiles_touched, geom.tiles_touched, P);
 	obtain(chunk, geom.scanning_space, geom.scan_size, 128);
 	obtain(chunk, geom.point_offsets, P, 128);
+	obtain(chunk, geom.visiable_count, 1, 128);
 	return geom;
 }
 
@@ -223,6 +224,7 @@ int CudaRasterizer::Rasterizer::forward(
 	float* feature_map,
 	float* out_feature,
 	float* out_feature_alpha,
+	int* out_feature_idx,
 	int* radii,
 	bool debug)
 {
@@ -232,6 +234,7 @@ int CudaRasterizer::Rasterizer::forward(
 	size_t chunk_size = required<GeometryState>(P);
 	char* chunkptr = geometryBuffer(chunk_size);
 	GeometryState geomState = GeometryState::fromChunk(chunkptr, P);
+	CHECK_CUDA(cudaMemset(geomState.visiable_count, 0, sizeof(int)), debug);
 
 	if (radii == nullptr)
 	{
@@ -276,6 +279,8 @@ int CudaRasterizer::Rasterizer::forward(
 		geomState.conic_opacity,
 		tile_grid,
 		geomState.tiles_touched,
+		geomState.visiable_count,
+		out_feature_idx,
 		prefiltered,
 		antialiasing
 	), debug)
