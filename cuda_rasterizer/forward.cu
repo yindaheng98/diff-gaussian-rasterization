@@ -374,17 +374,21 @@ renderCUDA(
 				continue;
 			}
 
+			float blend_alpha = alpha * T;
 			// Eq. (3) from 3D Gaussian splatting paper.
 			for (int ch = 0; ch < CHANNELS; ch++)
-				C[ch] += features[collected_id[j] * CHANNELS + ch] * alpha * T;
+				C[ch] += features[collected_id[j] * CHANNELS + ch] * blend_alpha;
 
 			// Feature fusion.
-			for (int ch = 0; ch < n_features; ch++)
-				atomicAdd(&(out_feature[collected_id[j] * n_features + ch]), pix_feature_map[ch] * alpha * T);
-			atomicAdd(&(out_feature_alpha[collected_id[j]]), alpha * T);
+			if (blend_alpha > fusion_alpha_threshold)
+			{
+				for (int ch = 0; ch < n_features; ch++)
+					atomicAdd(&(out_feature[collected_id[j] * n_features + ch]), pix_feature_map[ch] * blend_alpha);
+				atomicAdd(&(out_feature_alpha[collected_id[j]]), blend_alpha);
+			}
 
 			if(invdepth)
-			expected_invdepth += (1 / depths[collected_id[j]]) * alpha * T;
+			expected_invdepth += (1 / depths[collected_id[j]]) * blend_alpha;
 
 			T = test_T;
 
