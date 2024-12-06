@@ -66,6 +66,7 @@ namespace CudaRasterizer
 
 	struct RegressionState
 	{
+		size_t v11v12_size;
 		float* v11v12;
 
 		static RegressionState fromChunk(char*& chunk, size_t P);
