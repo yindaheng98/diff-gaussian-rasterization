@@ -213,7 +213,7 @@ class _RasterizeGaussians(torch.autograd.Function):
                 num_rendered,
                 binningBuffer,
                 imgBuffer,
-                0.0,
+                raster_settings.fusion_alpha_threshold,
                 motion_map,
                 raster_settings.antialiasing,
                 raster_settings.debug)
@@ -236,6 +236,7 @@ class GaussianRasterizationSettings(NamedTuple):
     prefiltered : bool
     debug : bool
     antialiasing : bool
+    fusion_alpha_threshold : float = 0.
 
 class GaussianRasterizer(nn.Module):
     def __init__(self, raster_settings):

@@ -680,6 +680,7 @@ renderCUDA(
 			// Update gradients w.r.t. opacity of the Gaussian
 			atomicAdd(&(dL_dopacity[global_id]), G * dL_dalpha);
 
+			if (alpha * T < fusion_alpha_threshold) return;
 			float* offset = v11v12 + global_id * (6 + 3 + 3);
 			// Update v11 matrix for both X and Y axis weighted regression
 			float pixfx = 2 * pixf.x / (float)W - 1.; // normalized pixel coordinate
