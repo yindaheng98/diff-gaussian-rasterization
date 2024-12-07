@@ -399,7 +399,7 @@ void CudaRasterizer::Rasterizer::backward(
 	size_t regression_chunk_size = required<RegressionState>(P);
 	char* regression_chunkptr = regressionBuffer(regression_chunk_size);
 	RegressionState regressionState = RegressionState::fromChunk(regression_chunkptr, P);
-	CHECK_CUDA(cudaMemset(regressionState.v11v12, 0, sizeof(float) * regressionState.v11v12_size), debug);
+	CHECK_CUDA(cudaMemset(regressionState.v11v12, 0, sizeof(double) * regressionState.v11v12_size), debug);
 
 	if (radii == nullptr)
 	{

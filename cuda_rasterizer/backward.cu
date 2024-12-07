@@ -160,7 +160,7 @@ __global__ void computeCov2DCUDA(int P,
 	float* motion2d,
 	float* motion_alpha,
 	float* motion_det,
-	float* v11v12,
+	double* v11v12,
 	float Wf, float Hf,
 	bool antialiasing)
 {
@@ -336,7 +336,7 @@ __global__ void computeCov2DCUDA(int P,
 	// T_save[3] = T[1][0]; T_save[4] = T[1][1]; T_save[5] = T[1][2];
 	// T_save[6] = T[2][0]; T_save[7] = T[2][1]; T_save[8] = T[2][2];
 
-	float* v_offset = v11v12 + idx * (6 + 3 + 3);
+	double* v_offset = v11v12 + idx * (6 + 3 + 3);
 	// // (scaffold) save v11 for verify
 	// float* T_save = out_B + 6;
 	// T_save[0] = v_offset[0]; T_save[1] = v_offset[1]; T_save[2] = v_offset[2];
@@ -359,8 +359,8 @@ __global__ void computeCov2DCUDA(int P,
 	// Compute inv(v11)
 	glm::dmat3 inv_v11 = glm::inverse(v11);
 	// Compute inv(v11)*v12 for XY axis weighted regression
-	float* x_v12 = v_offset; v_offset += 3;
-	float* y_v12 = v_offset; v_offset += 3;
+	double* x_v12 = v_offset; v_offset += 3;
+	double* y_v12 = v_offset; v_offset += 3;
 	glm::dmat3 B = inv_v11 * glm::dmat3(
 		x_v12[0], x_v12[1], x_v12[2],
 		y_v12[0], y_v12[1], y_v12[2],
@@ -517,7 +517,7 @@ renderCUDA(
 	const float2* __restrict__ motion_map,
 	float fusion_alpha_threshold,
 	int* __restrict__ pixhit,
-	float* __restrict__ v11v12
+	double* __restrict__ v11v12
 )
 {
 	// We rasterize again. Compute necessary block info.
@@ -684,11 +684,11 @@ renderCUDA(
 			atomicAdd(&(dL_dopacity[global_id]), G * dL_dalpha);
 
 			if (alpha * T < fusion_alpha_threshold) return;
-			float* offset = v11v12 + global_id * (6 + 3 + 3);
+			double* offset = v11v12 + global_id * (6 + 3 + 3);
 			// Update v11 matrix for both X and Y axis weighted regression
 			float pixfx = 2 * pixf.x / (float)W - 1.; // normalized pixel coordinate
 			float pixfy = 2 * pixf.y / (float)H - 1.; // normalized pixel coordinate
-			float* xyv11 = offset;
+			double* xyv11 = offset;
 			// v11 = SUM([
 			//   [1,   x,   y],
 			//   [x, x^2,  xy],
@@ -705,14 +705,14 @@ renderCUDA(
 			offset += 6;
 
 			// Update v12 matrix for both X axis weighted regression
-			float* x_v12 = offset;
+			double* x_v12 = offset;
 			// X axis v12 = SUM([1, x, y] * x' * weight)
 			float x_ = 2 * motion_map[pix_id].x / (float)W - 1.; // normalized pixel coordinate
 			atomicAdd(&(x_v12[0]), x_ * w); atomicAdd(&(x_v12[1]),  x_ * x); atomicAdd(&(x_v12[2]),  x_ * y);
 			offset += 3;
 
 			// Update v12 matrix for both Y axis weighted regression
-			float* y_v12 = offset;
+			double* y_v12 = offset;
 			// Y axis v12 = SUM([1, x, y] * y' * weight)
 			float y_ = 2 * motion_map[pix_id].y / (float)H - 1.; // normalized pixel coordinate
 			atomicAdd(&(y_v12[0]), y_ * w); atomicAdd(&(y_v12[1]),  y_ * x); atomicAdd(&(y_v12[2]),  y_ * y);
@@ -753,7 +753,7 @@ void BACKWARD::preprocess(
 	float* motion2d,
 	float* motion_alpha,
 	float* motion_det,
-	float* v11v12,
+	double* v11v12,
 	int W, int H,
 	bool antialiasing)
 {
@@ -830,7 +830,7 @@ void BACKWARD::render(
 	const float2* motion_map,
 	float fusion_alpha_threshold,
 	int* pixhit,
-	float* v11v12)
+	double* v11v12)
 {
 	renderCUDA<NUM_CHANNELS> << <grid, block >> >(
 		ranges,

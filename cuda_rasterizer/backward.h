@@ -42,7 +42,7 @@ namespace BACKWARD
 		const float2* motion_map,
 		float fusion_alpha_threshold,
 		int* pixhit,
-		float* v11v12);
+		double* v11v12);
 
 	void preprocess(
 		int P, int D, int M,
@@ -73,7 +73,7 @@ namespace BACKWARD
 		float* motion2d,
 		float* motion_alpha,
 		float* motion_det,
-		float* v11v12,
+		double* v11v12,
 		int W, int H,
 		bool antialiasing);
 }
