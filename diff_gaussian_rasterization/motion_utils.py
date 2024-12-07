@@ -70,7 +70,7 @@ def solve_cov3D(mean, fovx, fovy, width, height, view_matrix, cov2D):
 
 def unflatten_symmetry_2x2(A):
     '''Unflatten a 2x2 matrix'''
-    m = torch.zeros((A.shape[0], 2, 2), device=A.device)
+    m = torch.zeros((A.shape[0], 2, 2), dtype=A.dtype, layout=A.layout, device=A.device)
     m[..., 0, 0] = A[..., 0]
     m[..., 0, 1] = A[..., 1]
     m[..., 1, 0] = A[..., 1]
@@ -80,7 +80,7 @@ def unflatten_symmetry_2x2(A):
 
 def unflatten_symmetry_3x3(A):
     '''Unflatten a 3x3 matrix'''
-    m = torch.zeros((A.shape[0], 3, 3), device=A.device)
+    m = torch.zeros((A.shape[0], 3, 3), dtype=A.dtype, layout=A.layout, device=A.device)
     m[..., 0, 0] = A[..., 0]
     m[..., 0, 1] = A[..., 1]
     m[..., 0, 2] = A[..., 2]
