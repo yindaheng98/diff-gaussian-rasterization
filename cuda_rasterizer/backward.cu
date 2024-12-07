@@ -337,20 +337,23 @@ __global__ void computeCov2DCUDA(int P,
 	// T_save[6] = T[2][0]; T_save[7] = T[2][1]; T_save[8] = T[2][2];
 
 	float* v_offset = v11v12 + idx * (6 + 3 + 3);
+	// // (scaffold) save v11 for verify
+	// float* T_save = out_B + 6;
+	// T_save[0] = v_offset[0]; T_save[1] = v_offset[1]; T_save[2] = v_offset[2];
+	// T_save[3] = v_offset[1]; T_save[4] = v_offset[3]; T_save[5] = v_offset[4];
+	// T_save[6] = v_offset[2]; T_save[7] = v_offset[4]; T_save[8] = v_offset[5];
 	motion_alpha[idx] = v_offset[0];
 	// Compute inv(v11) for weighted regression
 	glm::dmat3 v11 = glm::dmat3(
 		v_offset[0], v_offset[1], v_offset[2],
 		v_offset[1], v_offset[3], v_offset[4],
-		v_offset[2], v_offset[4], v_offset[5]);
+		v_offset[2], v_offset[4], v_offset[5]) / (double)motion_alpha[idx];
 	v_offset += 6;
 	// Compute determinant
-	float det = glm::determinant(v11);
+	double det = glm::determinant(v11);
 	motion_det[idx] = det;
 
-	if (det < 1e-5) {
-		out_B[0] = 1; out_B[1] = 0; out_B[2] = 0;
-		out_B[3] = 0; out_B[4] = 1; out_B[5] = 0;
+	if (det < 1e-16) {
 		return;
 	}
 	// Compute inv(v11)
@@ -361,7 +364,7 @@ __global__ void computeCov2DCUDA(int P,
 	glm::dmat3 B = inv_v11 * glm::dmat3(
 		x_v12[0], x_v12[1], x_v12[2],
 		y_v12[0], y_v12[1], y_v12[2],
-		0, 0, 0);
+		0, 0, 0) / (double)motion_alpha[idx];
 	// return [A|b] for 2D transformation, be careful to the order: 1,2,0
 	out_B[0] = B[0][1]; out_B[1] = Wf/Hf*B[0][2]; out_B[2] = Wf*(B[0][0]-(B[0][1]+B[0][2]-1))/2; // denormalize
 	out_B[3] = Hf/Wf*B[1][1]; out_B[4] = B[1][2]; out_B[5] = Hf*(B[1][0]-(B[1][1]+B[1][2]-1))/2; // denormalize
