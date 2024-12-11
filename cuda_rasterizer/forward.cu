@@ -197,6 +197,10 @@ __global__ void preprocessCUDA(int P, int D, int M,
 	float4 p_hom = transformPoint4x4(p_orig, projmatrix);
 	float p_w = 1.0f / (p_hom.w + 0.0000001f);
 	float3 p_proj = { p_hom.x * p_w, p_hom.y * p_w, p_hom.z * p_w };
+	out_means2D[idx * 4 + 0] = p_hom.x;
+	out_means2D[idx * 4 + 1] = p_hom.y;
+	out_means2D[idx * 4 + 2] = p_hom.z;
+	out_means2D[idx * 4 + 3] = p_hom.w;
 
 	// If 3D covariance matrix is precomputed, use it, otherwise compute
 	// from scaling and rotation parameters. 
@@ -260,8 +264,8 @@ __global__ void preprocessCUDA(int P, int D, int M,
 	depths[idx] = p_view.z;
 	radii[idx] = my_radius;
 	points_xy_image[idx] = point_image;
-	out_means2D[idx * 3 + 0] = point_image.x;
-	out_means2D[idx * 3 + 1] = point_image.y;
+	// out_means2D[idx * 3 + 0] = point_image.x;
+	// out_means2D[idx * 3 + 1] = point_image.y;
 	// Inverse 2D covariance and opacity neatly pack into one float4
 	float opacity = opacities[idx];
 
