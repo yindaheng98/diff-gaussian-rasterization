@@ -197,13 +197,13 @@ __global__ void preprocessCUDA(int P, int D, int M,
 	float4 p_hom = transformPoint4x4(p_orig, projmatrix);
 	float p_w = 1.0f / (p_hom.w + 0.0000001f);
 	float3 p_proj = { p_hom.x * p_w, p_hom.y * p_w, p_hom.z * p_w };
-	out_means2D[idx * 7 + 0] = p_hom.x;
-	out_means2D[idx * 7 + 1] = p_hom.y;
-	out_means2D[idx * 7 + 2] = p_hom.z;
-	out_means2D[idx * 7 + 3] = p_hom.w;
-	out_means2D[idx * 7 + 4] = p_proj.x;
-	out_means2D[idx * 7 + 5] = p_proj.y;
-	out_means2D[idx * 7 + 6] = p_proj.z;
+	out_means2D[idx * 9 + 0] = p_hom.x;
+	out_means2D[idx * 9 + 1] = p_hom.y;
+	out_means2D[idx * 9 + 2] = p_hom.z;
+	out_means2D[idx * 9 + 3] = p_hom.w;
+	out_means2D[idx * 9 + 4] = p_proj.x;
+	out_means2D[idx * 9 + 5] = p_proj.y;
+	out_means2D[idx * 9 + 6] = p_proj.z;
 
 	// If 3D covariance matrix is precomputed, use it, otherwise compute
 	// from scaling and rotation parameters. 
@@ -248,6 +248,8 @@ __global__ void preprocessCUDA(int P, int D, int M,
 	float lambda2 = mid - sqrt(max(0.1f, mid * mid - det));
 	float my_radius = ceil(3.f * sqrt(max(lambda1, lambda2)));
 	float2 point_image = { ndc2Pix(p_proj.x, W), ndc2Pix(p_proj.y, H) };
+	out_means2D[idx * 9 + 7] = point_image.x;
+	out_means2D[idx * 9 + 8] = point_image.y;
 	uint2 rect_min, rect_max;
 	getRect(point_image, my_radius, rect_min, rect_max, grid);
 	if ((rect_max.x - rect_min.x) * (rect_max.y - rect_min.y) == 0)
