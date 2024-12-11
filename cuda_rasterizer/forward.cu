@@ -197,10 +197,13 @@ __global__ void preprocessCUDA(int P, int D, int M,
 	float4 p_hom = transformPoint4x4(p_orig, projmatrix);
 	float p_w = 1.0f / (p_hom.w + 0.0000001f);
 	float3 p_proj = { p_hom.x * p_w, p_hom.y * p_w, p_hom.z * p_w };
-	out_means2D[idx * 4 + 0] = p_hom.x;
-	out_means2D[idx * 4 + 1] = p_hom.y;
-	out_means2D[idx * 4 + 2] = p_hom.z;
-	out_means2D[idx * 4 + 3] = p_hom.w;
+	out_means2D[idx * 7 + 0] = p_hom.x;
+	out_means2D[idx * 7 + 1] = p_hom.y;
+	out_means2D[idx * 7 + 2] = p_hom.z;
+	out_means2D[idx * 7 + 3] = p_hom.w;
+	out_means2D[idx * 7 + 4] = p_proj.x;
+	out_means2D[idx * 7 + 5] = p_proj.y;
+	out_means2D[idx * 7 + 6] = p_proj.z;
 
 	// If 3D covariance matrix is precomputed, use it, otherwise compute
 	// from scaling and rotation parameters. 
