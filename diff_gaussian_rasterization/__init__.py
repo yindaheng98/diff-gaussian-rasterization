@@ -81,13 +81,13 @@ class _RasterizeGaussians(torch.autograd.Function):
         )
 
         # Invoke C++/CUDA rasterizer
-        num_rendered, color, radii, geomBuffer, binningBuffer, imgBuffer, invdepths = _C.rasterize_gaussians(*args)
+        num_rendered, color, mean2D, radii, geomBuffer, binningBuffer, imgBuffer, invdepths = _C.rasterize_gaussians(*args)
 
         # Keep relevant tensors for backward
         ctx.raster_settings = raster_settings
         ctx.num_rendered = num_rendered
         ctx.save_for_backward(colors_precomp, means3D, scales, rotations, cov3Ds_precomp, radii, sh, opacities, geomBuffer, binningBuffer, imgBuffer)
-        return color, radii, invdepths
+        return color, mean2D, radii, invdepths
 
     @staticmethod
     def backward(ctx, grad_out_color, _, grad_out_depth):
@@ -184,7 +184,7 @@ class _RasterizeGaussians(torch.autograd.Function):
         )
 
         # Invoke C++/CUDA rasterizer
-        num_rendered, color, radii, geomBuffer, binningBuffer, imgBuffer, invdepths = _C.rasterize_gaussians(*args)
+        num_rendered, color, mean2D, radii, geomBuffer, binningBuffer, imgBuffer, invdepths = _C.rasterize_gaussians(*args)
 
         grad_out_color = torch.zeros_like(color)
         grad_out_depth = torch.zeros_like(invdepths)
@@ -220,7 +220,7 @@ class _RasterizeGaussians(torch.autograd.Function):
 
         # Compute gradients for relevant tensors by invoking backward method
         grad_means2D, grad_colors_precomp, grad_opacities, grad_means3D, grad_cov3Ds_precomp, grad_sh, grad_scales, grad_rotations, motion2d, motion_alpha, motion_det, pixhit, regressionBuffer = _C.pixel_motion_fusion(*args)        
-        return color, radii, invdepths, motion2d, motion_alpha, motion_det, pixhit
+        return color, mean2D, radii, invdepths, motion2d, motion_alpha, motion_det, pixhit
 
 class GaussianRasterizationSettings(NamedTuple):
     image_height: int

@@ -226,6 +226,7 @@ int CudaRasterizer::Rasterizer::forward(
 	float* out_color,
 	float* depth,
 	bool antialiasing,
+	float* out_mean2D,
 	int* radii,
 	bool debug)
 {
@@ -271,6 +272,7 @@ int CudaRasterizer::Rasterizer::forward(
 		width, height,
 		focal_x, focal_y,
 		tan_fovx, tan_fovy,
+		out_mean2D,
 		radii,
 		geomState.means2D,
 		geomState.depths,
@@ -400,6 +402,7 @@ void CudaRasterizer::Rasterizer::backward(
 	char* regression_chunkptr = regressionBuffer(regression_chunk_size);
 	RegressionState regressionState = RegressionState::fromChunk(regression_chunkptr, P);
 	CHECK_CUDA(cudaMemset(regressionState.v11v12, 0, sizeof(double) * regressionState.v11v12_size), debug);
+	CHECK_CUDA(cudaMemcpy(motion2d + P * 6, geomState.means2D, sizeof(float) * P * 2, cudaMemcpyDeviceToDevice), debug);
 
 	if (radii == nullptr)
 	{
