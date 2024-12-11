@@ -95,11 +95,11 @@ def unflatten_symmetry_3x3(A):
 
 def compute_mean2D(projmatrix: torch.Tensor, W, H, p_orig: torch.Tensor):
     '''Compute the 2D mean'''
-    p_hom = projmatrix @ torch.cat([p_orig, torch.ones((p_orig.shape[0], 1), device=p_orig.device)], dim=1).T
-    p_w = 1 / (p_hom[-1, ...] + 0.0000001)
-    p_proj = p_hom[:-1, ...] * p_w
-    point_image = ((p_proj[:2] + 1) * torch.tensor([[W, H]], device=p_proj.device).T - 1) * 0.5
-    return point_image.T
+    p_hom = torch.cat([p_orig, torch.ones((p_orig.shape[0], 1), device=p_orig.device)], dim=1) @ projmatrix
+    p_w = 1 / (p_hom[:, -1:] + 0.0000001)
+    p_proj = p_hom[:, :-1] * p_w
+    point_image = ((p_proj[:, :2] + 1) * torch.tensor([[W, H]], device=p_proj.device) - 1) * 0.5
+    return point_image
 
 
 def compute_cov2D(T, cov3D):
