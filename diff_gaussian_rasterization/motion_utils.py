@@ -103,9 +103,9 @@ def compute_mean2D(projmatrix, W, H, p_orig):
 
 
 def compute_mean2D_equations(projmatrix, W, H, point_image):
-    p_proj = 2 * point_image / torch.tensor([[W, H]], device=point_image.device) - 1
-    eq1 = projmatrix[:, 0] - projmatrix[:, 2] * p_proj[:, 0:1]
-    eq2 = projmatrix[:, 1] - projmatrix[:, 2] * p_proj[:, 1:2]
+    p_proj = (2 * point_image + 1) / torch.tensor([[W, H]], device=point_image.device) - 1
+    eq1 = projmatrix[:, 0] - projmatrix[:, 3] * p_proj[:, 0:1]
+    eq2 = projmatrix[:, 1] - projmatrix[:, 3] * p_proj[:, 1:2]
     A = torch.stack([eq1, eq2], dim=1)
     return A
 
