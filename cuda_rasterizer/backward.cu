@@ -353,7 +353,7 @@ __global__ void computeCov2DCUDA(int P,
 	double det = glm::determinant(v11);
 	motion_det[idx] = det;
 
-	if (det < 1e-24) {
+	if (-1e-24 < det && det < 1e-24) {
 		return;
 	}
 	// Compute inv(v11)
