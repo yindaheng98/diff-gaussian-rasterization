@@ -366,8 +366,8 @@ __global__ void computeCov2DCUDA(int P,
 		y_v12[0], y_v12[1], y_v12[2],
 		0, 0, 0) / (double)motion_alpha[idx];
 	// return [A|b] for 2D transformation, be careful to the order: 1,2,0
-	out_B[0] = B[0][1]; out_B[1] = Wf/Hf*B[0][2]; out_B[2] = v_offset[0] / (double)motion_alpha[idx]; //Wf*(B[0][0]-(B[0][1]+B[0][2]-1))/2; // denormalize
-	out_B[3] = Hf/Wf*B[1][1]; out_B[4] = B[1][2]; out_B[5] = v_offset[1] / (double)motion_alpha[idx]; //Hf*(B[1][0]-(B[1][1]+B[1][2]-1))/2; // denormalize
+	out_B[0] = B[0][1]; out_B[1] = Wf/Hf*B[0][2]; out_B[2] = Wf*(v_offset[0] / (double)motion_alpha[idx])/2; //Wf*(B[0][0]-(B[0][1]+B[0][2]-1))/2; // denormalize
+	out_B[3] = Hf/Wf*B[1][1]; out_B[4] = B[1][2]; out_B[5] = Hf*(v_offset[1] / (double)motion_alpha[idx])/2; //Hf*(B[1][0]-(B[1][1]+B[1][2]-1))/2; // denormalize
 }
 
 // Backward pass for the conversion of scale and rotation to a 
@@ -718,8 +718,8 @@ renderCUDA(
 			atomicAdd(&(y_v12[0]), y_ * w); atomicAdd(&(y_v12[1]),  y_ * x); atomicAdd(&(y_v12[2]),  y_ * y);
 			offset += 3;
 
-			atomicAdd(offset + 0, (motion_map[pix_id].x - pixf.x) * w);
-			atomicAdd(offset + 1, (motion_map[pix_id].y - pixf.y) * w);
+			atomicAdd(offset + 0, (x_ - pixfx) * w);
+			atomicAdd(offset + 1, (y_ - pixfy) * w);
 
 			// Update pix hit counter
 			atomicAdd(&(pixhit[global_id]), 1);
