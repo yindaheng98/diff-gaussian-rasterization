@@ -336,7 +336,7 @@ __global__ void computeCov2DCUDA(int P,
 	// T_save[3] = T[1][0]; T_save[4] = T[1][1]; T_save[5] = T[1][2];
 	// T_save[6] = T[2][0]; T_save[7] = T[2][1]; T_save[8] = T[2][2];
 
-	double* v_offset = v11v12 + idx * (6 + 3 + 3);
+	double* v_offset = v11v12 + idx * (6 + 3 + 3 + 2);
 	// // (scaffold) save v11 for verify
 	// float* T_save = out_B + 6;
 	// T_save[0] = v_offset[0]; T_save[1] = v_offset[1]; T_save[2] = v_offset[2];
@@ -366,8 +366,8 @@ __global__ void computeCov2DCUDA(int P,
 		y_v12[0], y_v12[1], y_v12[2],
 		0, 0, 0) / (double)motion_alpha[idx];
 	// return [A|b] for 2D transformation, be careful to the order: 1,2,0
-	out_B[0] = B[0][1]; out_B[1] = Wf/Hf*B[0][2]; out_B[2] = Wf*(B[0][0]-(B[0][1]+B[0][2]-1))/2; // denormalize
-	out_B[3] = Hf/Wf*B[1][1]; out_B[4] = B[1][2]; out_B[5] = Hf*(B[1][0]-(B[1][1]+B[1][2]-1))/2; // denormalize
+	out_B[0] = B[0][1]; out_B[1] = Wf/Hf*B[0][2]; out_B[2] = v_offset[0] / (double)motion_alpha[idx]; //Wf*(B[0][0]-(B[0][1]+B[0][2]-1))/2; // denormalize
+	out_B[3] = Hf/Wf*B[1][1]; out_B[4] = B[1][2]; out_B[5] = v_offset[1] / (double)motion_alpha[idx]; //Hf*(B[1][0]-(B[1][1]+B[1][2]-1))/2; // denormalize
 }
 
 // Backward pass for the conversion of scale and rotation to a 
@@ -684,7 +684,7 @@ renderCUDA(
 			atomicAdd(&(dL_dopacity[global_id]), G * dL_dalpha);
 
 			if (alpha * T < fusion_alpha_threshold) return;
-			double* offset = v11v12 + global_id * (6 + 3 + 3);
+			double* offset = v11v12 + global_id * (6 + 3 + 3 + 2);
 			// Update v11 matrix for both X and Y axis weighted regression
 			float pixfx = 2 * pixf.x / (float)W - 1.; // normalized pixel coordinate
 			float pixfy = 2 * pixf.y / (float)H - 1.; // normalized pixel coordinate
@@ -717,6 +717,9 @@ renderCUDA(
 			float y_ = 2 * motion_map[pix_id].y / (float)H - 1.; // normalized pixel coordinate
 			atomicAdd(&(y_v12[0]), y_ * w); atomicAdd(&(y_v12[1]),  y_ * x); atomicAdd(&(y_v12[2]),  y_ * y);
 			offset += 3;
+
+			atomicAdd(offset + 0, (motion_map[pix_id].x - pixf.x) * w);
+			atomicAdd(offset + 1, (motion_map[pix_id].y - pixf.y) * w);
 
 			// Update pix hit counter
 			atomicAdd(&(pixhit[global_id]), 1);
