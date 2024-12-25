@@ -296,6 +296,7 @@ renderCUDA(
 	float* __restrict__ feature_map,
 	float* __restrict__ out_feature,
 	float* __restrict__ out_feature_alpha,
+	int* __restrict__ out_pixhit,
 	int* __restrict__ out_feature_idx)
 {
 	// Identify current tile and associated min/max pixel range.
@@ -392,6 +393,7 @@ renderCUDA(
 				for (int ch = 0; ch < n_features; ch++)
 					atomicAdd(&(out_feature[idx * n_features + ch]), pix_feature_map[ch] * blend_alpha);
 				atomicAdd(&(out_feature_alpha[idx]), blend_alpha);
+				atomicAdd(&(out_pixhit[idx]), 1);
 			}
 
 			if(invdepth)
@@ -438,6 +440,7 @@ void FORWARD::render(
 	float* feature_map,
 	float* out_feature,
 	float* out_feature_alpha,
+	int* out_pixhit,
 	int* out_feature_idx)
 {
 	renderCUDA<NUM_CHANNELS> << <grid, block >> > (
@@ -458,6 +461,7 @@ void FORWARD::render(
 		feature_map,
 		out_feature,
 		out_feature_alpha,
+		out_pixhit,
 		out_feature_idx);
 }
 

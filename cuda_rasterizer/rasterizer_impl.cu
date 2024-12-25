@@ -224,6 +224,7 @@ int CudaRasterizer::Rasterizer::forward(
 	float* feature_map,
 	std::function<float* (size_t)> out_feature,
 	std::function<float* (size_t)> out_feature_alpha,
+	std::function<int* (size_t)> out_pixhit,
 	int* out_feature_idx,
 	int* radii,
 	bool debug)
@@ -300,8 +301,10 @@ int CudaRasterizer::Rasterizer::forward(
 	BinningState binningState = BinningState::fromChunk(binning_chunkptr, num_rendered);
 	float* out_feature_ptr = out_feature(num_visiable);
 	float* out_feature_alpha_ptr = out_feature_alpha(num_visiable);
+	int* out_pixhit_ptr = out_pixhit(num_visiable);
 	CHECK_CUDA(cudaMemset(out_feature_ptr, 0, sizeof(float) * num_visiable * n_features), debug);
 	CHECK_CUDA(cudaMemset(out_feature_alpha_ptr, 0, sizeof(float) * num_visiable), debug);
+	CHECK_CUDA(cudaMemset(out_pixhit_ptr, 0, sizeof(int) * num_visiable), debug);
 
 	// For each instance to be rendered, produce adequate [ tile | depth ] key 
 	// and corresponding dublicated Gaussian indices to be sorted
@@ -357,6 +360,7 @@ int CudaRasterizer::Rasterizer::forward(
 		feature_map,
 		out_feature_ptr,
 		out_feature_alpha_ptr,
+		out_pixhit_ptr,
 		out_feature_idx), debug)
 
 	return num_rendered;

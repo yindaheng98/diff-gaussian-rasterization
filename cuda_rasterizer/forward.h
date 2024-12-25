@@ -70,6 +70,7 @@ namespace FORWARD
 		float* feature_map,
 		float* out_feature,
 		float* out_feature_alpha,
+		int* out_pixhit,
 		int* out_feature_idx);
 }
 

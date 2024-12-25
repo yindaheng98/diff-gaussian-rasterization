@@ -56,6 +56,7 @@ namespace CudaRasterizer
 			float* feature_map,
 			std::function<float* (size_t)> out_feature,
 			std::function<float* (size_t)> out_feature_alpha,
+			std::function<int* (size_t)> out_pixhit,
 			int* out_feature_idx,
 			int* radii = nullptr,
 			bool debug = false);

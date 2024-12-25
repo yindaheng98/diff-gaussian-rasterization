@@ -48,7 +48,15 @@ std::function<float*(size_t N)> resizeFunctionalFloat2D(torch::Tensor& t, size_t
     return lambda;
 }
 
-std::tuple<int, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
+std::function<int*(size_t N)> resizeFunctionalInt(torch::Tensor& t) {
+    auto lambda = [&t](size_t N) {
+        t.resize_({(long long)N});
+		return reinterpret_cast<int*>(t.contiguous().data_ptr());
+    };
+    return lambda;
+}
+
+std::tuple<int, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
 RasterizeGaussiansCUDA(
 	const torch::Tensor& background,
 	const torch::Tensor& means3D,
@@ -93,6 +101,7 @@ RasterizeGaussiansCUDA(
   torch::Tensor out_invdepth = torch::full({0, H, W}, 0.0, float_opts);
   torch::Tensor out_feature = torch::empty({0, n_features}, float_opts);
   torch::Tensor out_feature_alpha = torch::empty({0}, float_opts);
+  torch::Tensor out_pixhit = torch::empty({0}, int_opts);
   torch::Tensor out_feature_idx = torch::full({P}, -1, int_opts);
   float* out_invdepthptr = nullptr;
 
@@ -111,6 +120,7 @@ RasterizeGaussiansCUDA(
   std::function<char*(size_t)> imgFunc = resizeFunctional(imgBuffer);
   std::function<float*(size_t)> featureFunc = resizeFunctionalFloat2D(out_feature, (size_t)n_features);
   std::function<float*(size_t)> featureAlphaFunc = resizeFunctionalFloat(out_feature_alpha);
+  std::function<int*(size_t)> pixHitFunc = resizeFunctionalInt(out_pixhit);
   
   int rendered = 0;
   if(P != 0)
@@ -150,11 +160,12 @@ RasterizeGaussiansCUDA(
 		feature_map.contiguous().data<float>(),
 		featureFunc,
 		featureAlphaFunc,
+		pixHitFunc,
 		out_feature_idx.contiguous().data<int>(),
 		radii.contiguous().data<int>(),
 		debug);
   }
-  return std::make_tuple(rendered, out_color, radii, geomBuffer, binningBuffer, imgBuffer, out_invdepth, out_feature, out_feature_alpha, out_feature_idx);
+  return std::make_tuple(rendered, out_color, radii, geomBuffer, binningBuffer, imgBuffer, out_invdepth, out_feature, out_feature_alpha, out_pixhit, out_feature_idx);
 }
 
 std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
