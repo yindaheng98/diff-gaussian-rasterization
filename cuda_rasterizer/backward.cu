@@ -366,8 +366,8 @@ __global__ void computeCov2DCUDA(int P,
 		y_v12[0], y_v12[1], y_v12[2],
 		0, 0, 0) / (double)motion_alpha[idx];
 	// return [A|b] for 2D transformation, be careful to the order: 1,2,0
-	out_B[0] = B[0][1]; out_B[1] = Wf/Hf*B[0][2]; out_B[2] = Wf*(v_offset[0] / (double)motion_alpha[idx])/2; //Wf*(B[0][0]-(B[0][1]+B[0][2]-1))/2; // denormalize
-	out_B[3] = Hf/Wf*B[1][1]; out_B[4] = B[1][2]; out_B[5] = Hf*(v_offset[1] / (double)motion_alpha[idx])/2; //Hf*(B[1][0]-(B[1][1]+B[1][2]-1))/2; // denormalize
+	out_B[0] = B[0][1]; out_B[1] = Wf/Hf*B[0][2]; out_B[2] = Wf*(B[0][0]-B[0][1]-B[0][2]+1)/2; //Wf*(v_offset[0] / (double)motion_alpha[idx])/2; // denormalize
+	out_B[3] = Hf/Wf*B[1][1]; out_B[4] = B[1][2]; out_B[5] = Hf*(B[1][0]-B[1][1]-B[1][2]+1)/2; //Hf*(v_offset[1] / (double)motion_alpha[idx])/2; // denormalize
 }
 
 // Backward pass for the conversion of scale and rotation to a 
