@@ -285,7 +285,8 @@ renderCUDA(
 	const float* __restrict__ bg_color,
 	float* __restrict__ out_color,
 	const float* __restrict__ depths,
-	float* __restrict__ invdepth)
+	float* __restrict__ invdepth,
+	float* __restrict__ out_depth)
 {
 	// Identify current tile and associated min/max pixel range.
 	auto block = cg::this_thread_block();
@@ -310,12 +311,14 @@ renderCUDA(
 	__shared__ int collected_id[BLOCK_SIZE];
 	__shared__ float2 collected_xy[BLOCK_SIZE];
 	__shared__ float4 collected_conic_opacity[BLOCK_SIZE];
+	__shared__ float collected_depth[BLOCK_SIZE];
 
 	// Initialize helper variables
 	float T = 1.0f;
 	uint32_t contributor = 0;
 	uint32_t last_contributor = 0;
 	float C[CHANNELS] = { 0 };
+	float D = 65503.0f;  // Median Depth. TODO: This is a hack setting max_depth to 65503.0
 
 	float expected_invdepth = 0.0f;
 
@@ -335,6 +338,7 @@ renderCUDA(
 			collected_id[block.thread_rank()] = coll_id;
 			collected_xy[block.thread_rank()] = points_xy_image[coll_id];
 			collected_conic_opacity[block.thread_rank()] = conic_opacity[coll_id];
+			collected_depth[block.thread_rank()] = depths[coll_id];
 		}
 		block.sync();
 
@@ -371,6 +375,10 @@ renderCUDA(
 			for (int ch = 0; ch < CHANNELS; ch++)
 				C[ch] += features[collected_id[j] * CHANNELS + ch] * alpha * T;
 
+            // Median depth:
+            if (T > 0.5f && test_T < 0.5)
+				D = collected_depth[j];
+
 			if(invdepth)
 			expected_invdepth += (1 / depths[collected_id[j]]) * alpha * T;
 
@@ -390,6 +398,7 @@ renderCUDA(
 		n_contrib[pix_id] = last_contributor;
 		for (int ch = 0; ch < CHANNELS; ch++)
 			out_color[ch * H * W + pix_id] = C[ch] + T * bg_color[ch];
+		out_depth[pix_id] = D;
 
 		if (invdepth)
 		invdepth[pix_id] = expected_invdepth;// 1. / (expected_depth + T * 1e3);
@@ -409,7 +418,8 @@ void FORWARD::render(
 	const float* bg_color,
 	float* out_color,
 	float* depths,
-	float* depth)
+	float* invdepth,
+	float* out_depth)
 {
 	renderCUDA<NUM_CHANNELS> << <grid, block >> > (
 		ranges,
@@ -423,7 +433,8 @@ void FORWARD::render(
 		bg_color,
 		out_color,
 		depths, 
-		depth);
+		invdepth,
+		out_depth);
 }
 
 void FORWARD::preprocess(int P, int D, int M,

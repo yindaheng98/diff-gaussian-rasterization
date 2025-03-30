@@ -62,7 +62,8 @@ namespace FORWARD
 		const float* bg_color,
 		float* out_color,
 		float* depths,
-		float* depth);
+		float* invdepth,
+		float* out_depth);
 }
 
 

@@ -216,7 +216,8 @@ int CudaRasterizer::Rasterizer::forward(
 	const float tan_fovx, float tan_fovy,
 	const bool prefiltered,
 	float* out_color,
-	float* depth,
+	float* invdepth,
+	float* out_depth,
 	bool antialiasing,
 	int* radii,
 	bool debug)
@@ -335,7 +336,8 @@ int CudaRasterizer::Rasterizer::forward(
 		background,
 		out_color,
 		geomState.depths,
-		depth), debug)
+		invdepth,
+		out_depth), debug)
 
 	return num_rendered;
 }
